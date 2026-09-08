@@ -93,11 +93,13 @@ func parse(_ input: String) -> Fen? {
     guard rest.isEmpty, fracPart.count <= 2 else { return nil }
 
     guard let whole = intPart.isEmpty ? 0 : Int(intPart),
-          let frac = Int((fracPart + "00").prefix(2)),
-          case let (scaled, overflowed) = whole.multipliedReportingOverflow(by: 100), !overflowed,
-          case let (total, carried) = scaled.addingReportingOverflow(frac), !carried
+          let frac = Int((fracPart + "00").prefix(2))
     else { return nil }
-    return negative ? -total : total
+    let scaled = whole.multipliedReportingOverflow(by: 100)
+    guard !scaled.overflow else { return nil }
+    let total = scaled.partialValue.addingReportingOverflow(frac)
+    guard !total.overflow else { return nil }
+    return negative ? -total.partialValue : total.partialValue
 }
 
 /// Split a total across `n` buckets so the parts sum exactly to the total; the

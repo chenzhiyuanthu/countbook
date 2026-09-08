@@ -1,0 +1,359 @@
+/* The shared parts every screen is built from. Nothing here decides what a
+   screen says; it decides only how a card, a rule, a button and a sheet are
+   printed. Colours, spacing, radii and durations come from tokens.css. */
+
+:root {
+  /* Two DESIGN.md constants the token file does not emit. Declared once, under
+     the component prefix, rather than repeated as literals. */
+  --pr-gutter-amount: 96px;   /* §4.1 — the amount column on every list */
+  --pr-sheet-max: 480px;      /* §5.9 — sheet width is min(100%, 480) */
+}
+
+/* ── card ───────────────────────────────────────────────────────────── */
+
+.pr-card { padding: var(--s-5); }
+.pr-card--compact { padding: var(--s-4); }
+.pr-card--sunken {
+  background: var(--c-surface-sunken);
+  border-color: transparent;
+}
+
+/* ── row ────────────────────────────────────────────────────────────── */
+
+.pr-row {
+  width: 100%;
+  text-align: left;
+  color: inherit;
+}
+.pr-row--tap {
+  transition: background-color var(--d-row-fade) linear;
+}
+.pr-row--tap:active { background: var(--c-surface-sunken); }
+
+.pr-row__left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  flex: 1;
+  min-width: 0;
+}
+.pr-row__sub { color: var(--c-ink500); }
+.pr-row__right {
+  flex: none;
+  min-width: var(--pr-gutter-amount);
+  text-align: right;
+}
+
+/* ── label ──────────────────────────────────────────────────────────── */
+
+.pr-label { display: block; }
+
+/* ── button ─────────────────────────────────────────────────────────── */
+
+.pr-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: var(--l-hit-target);
+  padding-inline: var(--s-4);
+  border-radius: var(--r-card);
+  font-size: var(--t-body-size);
+  line-height: var(--t-body-leading);
+  font-weight: 500;
+  color: var(--c-ink900);
+  transition: background-color var(--d-row-fade) linear, opacity var(--d-row-fade) linear;
+}
+/* 52 = --s-8 + --s-3: the bar height in DESIGN.md §5.6. */
+.pr-btn--full {
+  display: flex;
+  width: 100%;
+  min-height: calc(var(--s-8) + var(--s-3));
+}
+/* Room at the right end for the hold ring, which is centred --s-4 from the edge. */
+.pr-btn--hold { padding-right: calc(var(--s-4) * 2 + var(--s-6)); }
+
+.pr-btn--primary {
+  background: var(--c-ink900);
+  color: var(--c-paper);
+  font-weight: 600;
+}
+.pr-btn--primary:active:not(:disabled) { opacity: 0.86; }
+/* Ink on ink is invisible, so the commit bar inverts its focus ring (§9.2). */
+.pr-btn--primary:focus-visible {
+  outline-color: var(--c-paper);
+  outline-offset: calc(var(--s-1) * -1);
+}
+
+.pr-btn--quiet:active:not(:disabled) { background: var(--c-surface-sunken); }
+
+/* Destructive is never red — red is rationed to three uses (§2.5). A danger
+   button is separated by its rule and its weight instead. */
+.pr-btn--danger {
+  background: var(--c-surface);
+  border: var(--l-hairline) solid var(--c-ink500);
+  font-weight: 600;
+}
+.pr-btn--danger:active:not(:disabled) { background: var(--c-surface-sunken); }
+
+.pr-btn:disabled {
+  cursor: default;
+  color: var(--c-ink300);
+}
+.pr-btn--primary:disabled { background: var(--c-surface-sunken); }
+.pr-btn--danger:disabled { border-color: var(--c-rule); }
+
+.pr-btn__ring {
+  position: absolute;
+  right: var(--s-4);
+  top: 50%;
+  width: var(--s-6);
+  height: var(--s-6);
+  margin-top: calc(var(--s-6) / -2);
+}
+.pr-btn__ring circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-linecap: butt;
+}
+.pr-btn__ring-track { opacity: 0.4; }
+/* The arc starts at twelve o'clock and fills clockwise, strictly linearly:
+   an eased timer lies about how much time is left. */
+.pr-btn__ring-arc {
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+.pr-btn__count {
+  position: absolute;
+  right: var(--s-4);
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--f-mono);
+  font-size: var(--t-label-size);
+}
+
+/* ── segmented ──────────────────────────────────────────────────────── */
+
+.pr-seg {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  border-bottom: var(--l-hairline) solid var(--c-rule);
+}
+.pr-seg__opt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--l-hit-target);
+  border-radius: var(--r-pill);
+  font-size: var(--t-body-size);
+  font-weight: 500;
+  color: var(--c-ink500);
+}
+.pr-seg__opt[aria-checked='true'] {
+  color: var(--c-ink900);
+  font-weight: 600;
+}
+/* Selection is a rule, never a fill (§2.1 R5). It sits on the bottom hairline
+   and slides between labels. */
+.pr-seg__ink {
+  position: absolute;
+  left: 0;
+  bottom: calc(var(--l-hairline) * -1);
+  height: calc(var(--l-hairline) * 2);
+  width: var(--pr-seg-w, 0);
+  background: var(--c-ink900);
+  transform: translateX(var(--pr-seg-x, 0));
+  transition:
+    transform var(--d-stamp-slide) var(--ease),
+    width var(--d-stamp-slide) var(--ease);
+}
+
+/* ── sheet ──────────────────────────────────────────────────────────── */
+
+.pr-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--c-scrim);
+  animation: pr-scrim-in var(--d-scrim-fade) linear both;
+}
+.pr-scrim--leaving { animation: pr-scrim-out var(--d-scrim-fade) linear both; }
+
+.pr-sheet {
+  width: 100%;
+  max-width: var(--pr-sheet-max);
+  max-height: 92dvh;
+  overflow-y: auto;
+  background: var(--c-surface);
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  box-shadow: var(--e-sheet);
+  padding: var(--s-8) var(--l-gutter) calc(var(--s-5) + env(safe-area-inset-bottom));
+  animation: pr-sheet-in var(--d-sheet-present) var(--ease) both;
+}
+.pr-scrim--leaving .pr-sheet { animation: pr-sheet-out var(--d-sheet-dismiss) var(--ease) both; }
+
+/* A black shadow on a graphite ground is invisible; in dark the sheet is
+   separated by a rule and the scrim instead (§4.5). */
+:root[data-theme='dark'] .pr-sheet { border-top: var(--l-hairline) solid var(--c-rule-strong); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .pr-sheet {
+    border-top: var(--l-hairline) solid var(--c-rule-strong);
+  }
+}
+
+.pr-sheet__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding-bottom: var(--s-4);
+}
+.pr-sheet__close {
+  flex: none;
+  width: var(--l-hit-target);
+  height: var(--l-hit-target);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: calc(var(--s-3) * -1) calc(var(--s-3) * -1) 0 0;
+  color: var(--c-ink700);
+}
+
+@keyframes pr-scrim-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pr-scrim-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes pr-sheet-in {
+  from { opacity: 0; transform: translateY(var(--s-6)); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pr-sheet-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(var(--s-6)); }
+}
+
+/* ── field ──────────────────────────────────────────────────────────── */
+
+.pr-field { display: block; }
+.pr-field__label { display: block; padding-bottom: var(--s-2); }
+.pr-field__well {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: var(--l-hit-target);
+  padding-inline: var(--s-3);
+  background: var(--c-surface-sunken);
+  border-radius: var(--r-field);
+  border-bottom: var(--l-hairline) solid var(--c-rule);
+}
+/* A rule that carries state is --rule-active, which is the value ink-500 also
+   carries; the generated token file does not emit it under its own name. */
+.pr-field__well:focus-within { border-bottom-color: var(--c-ink500); }
+.pr-field__input {
+  flex: 1;
+  min-width: 0;
+  padding-block: var(--s-3);
+  color: var(--c-ink900);
+}
+.pr-field__input::placeholder { color: var(--c-ink500); }
+.pr-field__input:disabled { color: var(--c-ink300); }
+.pr-field--mono .pr-field__input { font-family: var(--f-mono); }
+.pr-field__suffix { flex: none; color: var(--c-ink500); }
+
+/* ── stepper ────────────────────────────────────────────────────────── */
+
+.pr-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.pr-stepper__value {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  color: var(--c-ink900);
+}
+.pr-stepper__btn {
+  flex: none;
+  width: var(--l-hit-target);
+  height: var(--l-hit-target);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-field);
+  color: var(--c-ink700);
+  transition: background-color var(--d-row-fade) linear;
+}
+.pr-stepper__btn:active:not(:disabled) { background: var(--c-surface-sunken); }
+.pr-stepper__btn:disabled { color: var(--c-ink300); cursor: default; }
+
+/* ── empty state ────────────────────────────────────────────────────── */
+
+/* Offset from the top of the content area, not centred: a centred sentence
+   reads as a placeholder screen. */
+.pr-empty {
+  padding-top: var(--s-9);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+}
+.pr-empty__title { color: var(--c-ink700); }
+.pr-empty__body { color: var(--c-ink500); }
+.pr-empty__action { padding-top: var(--s-2); }
+
+/* ── progress rule ──────────────────────────────────────────────────── */
+
+.pr-progress {
+  width: 100%;
+  height: var(--l-hairline);
+  background: var(--c-rule);
+  color: var(--c-ink700);
+}
+.pr-progress__fill {
+  height: 100%;
+  background: currentColor;
+}
+/* Tone is set here rather than by a base.css ink class so that the cascade
+   order of two independently imported stylesheets cannot decide it. */
+.pr-progress--over { color: var(--c-fig-over); }
+.pr-progress--held { color: var(--c-fig-held); }
+.pr-progress--spared { color: var(--c-fig-spared); }
+.pr-progress--regret { color: var(--c-fig-regret); }
+
+/* ── ring ───────────────────────────────────────────────────────────── */
+
+.pr-ring {
+  display: inline-block;
+  vertical-align: middle;
+  color: var(--c-fig-held);
+}
+.pr-ring--neutral { color: var(--c-ink700); }
+.pr-ring--over { color: var(--c-fig-over); }
+.pr-ring--spared { color: var(--c-fig-spared); }
+.pr-ring--regret { color: var(--c-fig-regret); }
+.pr-ring circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-linecap: butt;
+}
+/* Twelve o'clock start, depleting counter-clockwise: the mirror reverses the
+   sweep without moving where it begins. */
+.pr-ring__arc {
+  transform: scaleX(-1) rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+/* One device pixel, as in base.css: a full 1px rule at 2× is a bar. */
+@media (min-resolution: 2dppx) {
+  .pr-seg,
+  .pr-field__well { border-bottom-width: 0.5px; }
+  .pr-progress { height: 0.5px; }
+}

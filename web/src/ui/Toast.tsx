@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useStore } from '../app/store'
 import { Icon } from './icons'
 import './Toast.css'
@@ -13,24 +13,27 @@ export function Toast() {
   const [drag, setDrag] = useState(0)
   const from = useRef<number | null>(null)
   const id = toastState?.id
-  const hasAction = toastState?.action !== undefined
+  const action = toastState?.action
 
-  // A toast that carries an action waits for an answer; a toast that only
+  // A toast that carries an action waits for its answer; a toast that only
   // reports something leaves on its own.
   useEffect(() => {
-    if (id === undefined || hasAction) return
+    if (id === undefined || action !== undefined) return
     const timer = window.setTimeout(dismissToast, DWELL_MS)
     return () => window.clearTimeout(timer)
-  }, [id, hasAction, dismissToast])
+  }, [id, action, dismissToast])
 
   useEffect(() => setDrag(0), [id])
 
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+  const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    // Capturing the pointer would retarget the click and swallow the press on
+    // 撤销 or on the close control, so the body is draggable and they are not.
+    if (e.target instanceof Element && e.target.closest('button')) return
     from.current = e.clientY
     e.currentTarget.setPointerCapture(e.pointerId)
   }
 
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+  const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (from.current === null) return
     setDrag(Math.max(0, e.clientY - from.current))
   }
@@ -42,15 +45,15 @@ export function Toast() {
     else setDrag(0)
   }
 
-  const action = toastState?.action
-
   return (
     <div className="toast-slot" role="status" aria-live="polite">
       {toastState && (
         <div
           className="toast"
           key={toastState.id}
-          style={drag > 0 ? { transform: `translateY(${drag}px)` } : undefined}
+          // The drag tracks the finger 1:1; letting go hands the transition back
+          // to CSS, which walks it home.
+          style={drag > 0 ? { transform: `translateY(${drag}px)`, transition: 'none' } : undefined}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}

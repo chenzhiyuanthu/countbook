@@ -8,7 +8,7 @@ import {
 } from '../sync/crypto'
 import { GitHubStore, type GitHubConfig } from '../sync/github'
 import { syncServer, type ServerConfig, type ServerCursor } from '../sync/server'
-import { syncVault, type Cursor, type Manifest } from '../sync/vault'
+import { emptyCursor, syncVault, type Cursor, type Manifest } from '../sync/vault'
 import { KEYS, lsGet, lsRemove, lsSet } from './db'
 import { useStore } from './store'
 
@@ -115,7 +115,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         let merged: Event[]
         if (cfg.kind === 'github') {
           const store = new GitHubStore(cfg)
-          const cursor = lsGet<Cursor>(CURSOR_KEY, {})
+          const cursor = lsGet<Cursor>(CURSOR_KEY, emptyCursor())
           const out = await syncVault(store, vk, eventsRef.current, cursor)
           lsSet(CURSOR_KEY, out.cursor)
           merged = out.merged

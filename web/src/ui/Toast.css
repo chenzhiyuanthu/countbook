@@ -1,0 +1,74 @@
+/* One slot, above the tab bar. The toast is the only inverted ground in the
+   product, which is why it may appear at most one at a time and never for
+   praise — it exists so a delete can be taken back. */
+
+.toast-slot {
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(var(--tabbar-h, calc(var(--l-hit-target) + var(--s-1))) + env(safe-area-inset-bottom) + var(--s-4));
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  padding-inline: var(--l-gutter);
+  /* The slot is always mounted so the live region can announce; only the toast
+     itself is a target. */
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  max-width: calc(var(--l-content-max) - var(--l-gutter) * 2);
+  min-height: var(--l-hit-target);
+  padding-left: var(--s-4);
+  background: var(--c-ink900);
+  color: var(--c-paper);
+  border-radius: var(--r-card);
+  transition: transform var(--d-stamp-slide) var(--ease);
+  /* backwards, not both: once it has arrived the animation must stop
+     holding the transform, or a drag cannot move it. */
+  animation: toast-in var(--d-stamp-slide) var(--ease) backwards;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(var(--s-2)); }
+  to { opacity: 1; transform: none; }
+}
+
+.toast__message {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--t-body-size);
+  line-height: var(--t-body-leading);
+}
+
+.toast__action {
+  font-size: var(--t-body-size);
+  font-weight: 600;
+  color: var(--c-paper);
+  text-decoration: underline;
+  text-decoration-thickness: var(--l-hairline);
+  text-underline-offset: var(--s-1);
+  min-height: var(--l-hit-target);
+  padding-inline: var(--s-2);
+}
+
+.toast__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: var(--l-hit-target);
+  height: var(--l-hit-target);
+  color: var(--c-paper);
+}
+
+/* On an inked ground the focus ring has to invert with it. */
+.toast :focus-visible {
+  outline-color: var(--c-paper);
+  outline-offset: calc(var(--s-1) * -1);
+}

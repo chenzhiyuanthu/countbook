@@ -1,4 +1,4 @@
-import { ConflictError, MANIFEST_PATH, shardPath, type Cursor, type Manifest, type VaultStore } from './vault'
+import { ConflictError, MANIFEST_PATH, shardPath, type Manifest, type VaultStore } from './vault'
 
 /**
  * Adapter A — a private GitHub repository as the vault.
@@ -114,8 +114,8 @@ export class GitHubStore implements VaultStore {
     await this.put(MANIFEST_PATH, btoa(unescape(encodeURIComponent(JSON.stringify(m, null, 2)))), this.shas.get(MANIFEST_PATH) ?? null, 'vault: manifest')
   }
 
-  async listShards(): Promise<Cursor> {
-    const out: Cursor = {}
+  async listShards(): Promise<Record<string, string>> {
+    const out: Record<string, string> = {}
     try {
       const res = await this.call(
         `/repos/${this.cfg.owner}/${this.cfg.repo}/git/trees/${this.cfg.branch}?recursive=1`,

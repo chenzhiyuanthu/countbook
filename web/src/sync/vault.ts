@@ -54,8 +54,31 @@ export async function decodeShard(vk: VaultKey, body: string): Promise<Event[]> 
   return Array.isArray(parsed) ? (parsed as Event[]) : []
 }
 
-/** Version tokens per shard path, persisted locally so the next sync is a diff. */
-export type Cursor = Record<string, string>
+/**
+ * What this device believes about the remote, persisted between syncs.
+ *
+ * `shas` is the remote blob version of each shard as of the last successful
+ * sync. `digests` is what *we* held in that shard at the same moment. Both are
+ * needed: the sha alone says whether the remote moved, and only the digest says
+ * whether we have anything new to send — without it a device cannot tell
+ * "already in sync" from "my local copy was cleared".
+ */
+export interface Cursor {
+  shas: Record<string, string>
+  digests: Record<string, string>
+}
+
+export const emptyCursor = (): Cursor => ({ shas: {}, digests: {} })
+
+/** Order-independent summary of which events we hold for one shard. */
+export function digestOf(events: readonly Event[]): string {
+  const ids = events.map((e) => e.id).sort()
+  let h = 0
+  for (const id of ids) {
+    for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0
+  }
+  return `${ids.length}:${(h >>> 0).toString(36)}`
+}
 
 export interface SyncOutcome {
   merged: Event[]
@@ -75,8 +98,8 @@ export interface VaultStore {
   describe(): string
   readManifest(): Promise<Manifest | null>
   writeManifest(m: Manifest): Promise<void>
-  /** path -> version token, for everything under vault/s/. */
-  listShards(): Promise<Cursor>
+  /** Shard path -> remote version token, for everything under vault/s/. */
+  listShards(): Promise<Record<string, string>>
   readShard(month: string): Promise<string>
   /** Returns the new token. Throws ConflictError if `expected` is stale. */
   writeShard(month: string, body: string, expected: string | null): Promise<string>
@@ -90,10 +113,19 @@ export class ConflictError extends Error {
 }
 
 /**
- * Pull what changed, merge, push what is ours. A conflicting write is not an
- * error condition to report — it just means another device wrote first, so we
- * re-read that shard, merge again (union is idempotent, so this always
- * converges) and retry.
+ * Pull what changed, merge, push what is ours.
+ *
+ * The invariant that makes this safe: a shard is only ever written by a device
+ * that holds everything already in it. Writing replaces the whole shard, so a
+ * device that skipped the pull — because its cursor said it was current — and
+ * then wrote from a partial local log would silently delete the other device's
+ * entries. The cursor's sha can be stale (GitHub's tree endpoint is a replica
+ * and lags a commit by a second or two), so being "current" is never taken on
+ * trust before an overwrite: any shard about to be written is read first.
+ *
+ * A conflicting write is not an error to report. It means another device wrote
+ * first, so we take their version, union it with ours — union is idempotent, so
+ * this converges — and try again.
  */
 export async function syncVault(
   store: VaultStore,
@@ -102,49 +134,61 @@ export async function syncVault(
   cursor: Cursor,
   maxRetries = 5,
 ): Promise<SyncOutcome> {
-  const remoteTokens = await store.listShards()
+  const remote = await store.listShards()
+  const held = new Set<string>() // shards whose remote contents are merged in
   let merged = [...local]
   let pulled = 0
 
-  for (const [path, token] of Object.entries(remoteTokens)) {
+  for (const [path, sha] of Object.entries(remote)) {
     const month = monthFromShardPath(path)
-    if (!month || cursor[path] === token) continue
-    const events = await decodeShard(vk, await store.readShard(month))
-    pulled += events.length
-    merged = merge(merged, events)
+    if (!month || cursor.shas[path] === sha) continue
+    const before = merged.length
+    merged = merge(merged, await decodeShard(vk, await store.readShard(month)))
+    pulled += merged.length - before
+    held.add(path)
   }
 
-  const next: Cursor = { ...cursor, ...remoteTokens }
-  const byShard = groupByShard(merged)
+  const next: Cursor = { shas: { ...cursor.shas, ...remote }, digests: { ...cursor.digests } }
   let pushed = 0
 
-  for (const [month, events] of byShard) {
+  for (const month of [...groupByShard(merged).keys()]) {
     const path = shardPath(month)
-    const remoteToken = remoteTokens[path] ?? null
-    // Nothing new for this month: the remote token is current and we pulled it.
-    const knownIds = new Set(events.map((e) => e.id))
-    if (remoteToken && next[path] === remoteToken && knownIds.size === events.length) {
-      const localOnly = events.filter((e) => !local.some((l) => l.id === e.id))
-      if (localOnly.length === 0 && cursor[path] === remoteToken) continue
+    const remoteSha = remote[path] ?? null
+    const mine = groupByShard(merged).get(month) ?? []
+
+    // Neither side has moved since the last sync of this shard.
+    if (remoteSha && cursor.shas[path] === remoteSha && cursor.digests[path] === digestOf(mine)) {
+      next.digests[path] = digestOf(mine)
+      continue
     }
 
-    let attempt = 0
-    let expected = remoteToken
-    let toWrite = events
-    for (;;) {
+    if (remoteSha && !held.has(path)) {
+      const before = merged.length
+      merged = merge(merged, await decodeShard(vk, await store.readShard(month)))
+      pulled += merged.length - before
+      held.add(path)
+    }
+
+    let toWrite = groupByShard(merged).get(month) ?? []
+    // The extra read may have shown that they already had everything we hold.
+    if (remoteSha && cursor.shas[path] === remoteSha && cursor.digests[path] === digestOf(toWrite)) {
+      next.digests[path] = digestOf(toWrite)
+      continue
+    }
+
+    let expected = remoteSha
+    for (let attempt = 0; ; attempt++) {
       try {
-        next[path] = await store.writeShard(month, await encodeShard(vk, toWrite), expected)
+        next.shas[path] = await store.writeShard(month, await encodeShard(vk, toWrite), expected)
+        next.digests[path] = digestOf(toWrite)
         pushed += toWrite.length
         break
       } catch (err) {
-        if (!(err instanceof ConflictError) || ++attempt > maxRetries) throw err
-        // Someone else wrote this month while we were sealing it. Take their
-        // version, union it with ours, and try again — union is idempotent, so
-        // this terminates as soon as we win a race.
+        if (!(err instanceof ConflictError) || attempt >= maxRetries) throw err
         const fresh = await store.listShards()
         expected = fresh[path] ?? null
-        toWrite = merge(toWrite, expected ? await decodeShard(vk, await store.readShard(month)) : [])
-        merged = merge(merged, toWrite)
+        if (expected) merged = merge(merged, await decodeShard(vk, await store.readShard(month)))
+        toWrite = groupByShard(merged).get(month) ?? toWrite
       }
     }
   }

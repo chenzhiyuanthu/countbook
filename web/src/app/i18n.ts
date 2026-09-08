@@ -18,6 +18,7 @@ export const STRINGS = {
   'tab.report': ['报告', 'Report'],
   'tab.wants': ['待购', 'Wants'],
   'tab.settings': ['设置', 'Settings'],
+  'tab.nav': ['主导航', 'Main navigation'],
 
   'today.available': ['今日可用', 'Available today'],
   'today.provenance': ['标准 {standard} · 已花 {spent} · 待扣 {fixed} · 余 {days} 天', 'Standard {standard} · spent {spent} · committed {fixed} · {days} days left'],
@@ -52,6 +53,7 @@ export const STRINGS = {
   'capture.cancel': ['取消', 'Cancel'],
   'capture.saved': ['已存入', 'Entered'],
   'capture.keepOpen': ['继续记', 'Keep going'],
+  'capture.mark': ['记', 'Log'],
 
   'ledger.title': ['账页', 'Ledger'],
   'ledger.month': ['{month}', '{month}'],
@@ -207,6 +209,8 @@ export const STRINGS = {
   'common.retry': ['重试', 'Retry'],
   'common.close': ['关闭', 'Close'],
   'common.confirm': ['确定', 'Confirm'],
+  'common.increase': ['增加', 'Increase'],
+  'common.decrease': ['减少', 'Decrease'],
 } as const satisfies Record<string, readonly [string, string]>
 
 export type StringKey = keyof typeof STRINGS

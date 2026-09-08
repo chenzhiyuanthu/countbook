@@ -1,0 +1,111 @@
+/* The ¥ / 元 / 分 composition of DESIGN.md §3.6. The 0.44 and 0.56 ratios and
+   the 2.6ch fraction box are allowed to be literals here and nowhere else:
+   they are the composition itself, and CI asserts they appear in no other file. */
+
+.money {
+  /* No figure-only family token is generated yet; --f-sans is the nearest, and
+     the tabular features below keep a column of amounts aligned either way. */
+  font-family: var(--f-sans);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+  font-variant-ligatures: none;
+  white-space: nowrap;
+  /* One click takes the whole figure; the split spans would otherwise select
+     as fragments. */
+  -webkit-user-select: all;
+  user-select: all;
+}
+
+/* R8 (DESIGN.md §2.4): the 分 may only take ink-300 where it renders ≥19px,
+   which is true at section size and above and false below it. */
+.money--hero,
+.money--screen,
+.money--section {
+  --money-ink: var(--c-ink900);
+  --money-frac: var(--c-ink300);
+}
+
+.money--row,
+.money--body {
+  --money-ink: var(--c-ink700);
+  --money-frac: var(--c-ink500);
+}
+
+/* After the size defaults, so a stated tone wins over the default ink. */
+.money--over { --money-ink: var(--c-fig-over); }
+.money--held { --money-ink: var(--c-fig-held); }
+.money--spared { --money-ink: var(--c-fig-spared); }
+.money--regret { --money-ink: var(--c-fig-regret); }
+
+/* The shared type roles carry their own colour; the compound selector settles
+   the tie without depending on which stylesheet the bundler emits first. */
+.money.money--hero,
+.money.money--screen,
+.money.money--section,
+.money.money--row,
+.money.money--body {
+  color: var(--money-ink);
+}
+
+.money__mark {
+  font-size: 0.44em;
+  letter-spacing: 0.08em;
+  color: var(--c-ink300);
+}
+
+/* Sign is a property of the figure, not of the currency mark, and it is never
+   the thing that says a figure is bad — U+2212 does that on its own. */
+.money__sign {
+  color: var(--money-ink);
+}
+
+.money__frac {
+  display: inline-block;
+  width: 2.6ch;
+  font-size: 0.56em;
+  font-weight: inherit;
+  /* Baseline-aligned, never superscript. */
+  vertical-align: baseline;
+  text-align: left;
+  color: var(--money-frac);
+}
+
+/* Transforms do not apply to inline boxes, and the settle translates on Y. */
+.money__d {
+  display: inline-block;
+}
+
+@keyframes money-settle {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* will-change is deliberately absent: it pins a layer per digit, and there can
+   be thirty figures on one screen. */
+.money__d--settle {
+  animation: money-settle var(--d-figure-settle) var(--ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .money__d--settle {
+    animation: none;
+  }
+}
+
+/* In high contrast the R8 size rule is suspended: the reader has said that
+   legibility outranks hierarchy, so the 分 takes ink-500 at every size. */
+@media (prefers-contrast: more) {
+  .money--hero,
+  .money--screen,
+  .money--section,
+  .money--row,
+  .money--body {
+    --money-frac: var(--c-ink500);
+  }
+}

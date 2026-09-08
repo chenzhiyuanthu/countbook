@@ -40,7 +40,8 @@ export function TabBar({ current, onChange }: { current: TabId; onChange: (id: T
     const observer = new ResizeObserver(measure)
     observer.observe(row)
     return () => observer.disconnect()
-  }, [current])
+    // `t` is in the deps because switching language changes the word widths.
+  }, [current, t])
 
   // The only notification affordance in the product: a pending reckoning makes
   // the 报告 word take full ink while it is still unselected. No badge, no dot.

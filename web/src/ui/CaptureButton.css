@@ -1,0 +1,33 @@
+/* Sits over the page, clear of the tab bar and clear of the last row: the
+   scroller reserves the button's height plus its gap, so scrolling to the end
+   of a ledger still ends on a readable row. */
+
+.capture-button {
+  position: fixed;
+  right: calc(var(--l-gutter) + env(safe-area-inset-right));
+  bottom: calc(
+    var(--tabbar-h, calc(var(--l-hit-target) + var(--s-1))) + env(safe-area-inset-bottom) + var(--s-4)
+  );
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--s-9) + var(--s-2));
+  height: calc(var(--s-9) + var(--s-2));
+  border-radius: var(--r-pill);
+  background: var(--c-ink900);
+  color: var(--c-paper);
+}
+
+.capture-button:active {
+  /* Pressed is a change of value in the ground, never a lift or a scale. */
+  background: color-mix(in srgb, var(--c-ink900) 86%, var(--c-paper));
+}
+
+.capture-button__mark {
+  /* 22 is the specified size and no token holds it; the row figure plus one
+     spacing step lands there without inventing a literal. */
+  font-size: calc(var(--t-row-size) + var(--s-1));
+  font-weight: 500;
+  line-height: 1;
+}
