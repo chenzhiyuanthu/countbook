@@ -1,0 +1,197 @@
+/* Hand-drawn charts. Marks are SVG; every label is real HTML text, because the
+   plots stretch horizontally to fill their column and stretched type is not
+   type. Vertical metrics are exact pixels: each viewBox is as tall as its box. */
+
+.chart {
+  margin: 0;
+  animation: chart-reveal var(--d-row-fade) var(--ease) both;
+}
+
+@keyframes chart-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.chart__mark { fill: var(--c-ink700); }
+.chart__mark--over { fill: var(--c-fig-over); }
+.chart__mark--second { fill: var(--c-ink500); }
+
+.chart__reference {
+  stroke: var(--c-rule-strong);
+  stroke-width: 1;
+}
+
+/* The one interactive affordance in the product: a full-height hairline, no
+   bubble. --c-ink500 is the state-bearing rule value. */
+.chart__hairline {
+  stroke: var(--c-ink500);
+  stroke-width: 1;
+}
+.chart__hairline--today { stroke: var(--c-rule-strong); }
+
+/* Pattern definitions need a host element but nothing to show for themselves. */
+.chart__defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+/* A withheld statistic keeps the height its chart would have taken, so the page
+   does not jump on the day the sample arrives. */
+.chart__gate {
+  min-height: var(--gate-h, var(--s-10));
+  margin: 0;
+  padding-block: var(--s-3);
+}
+
+.chart__fig {
+  font-size: var(--t-row-size);
+  font-weight: var(--t-row-weight);
+  line-height: var(--t-row-leading);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ── 月度日柱 ───────────────────────────────────────────────────────────── */
+
+.chart-strip__plot {
+  position: relative;
+  height: var(--strip-h);
+}
+
+.chart-strip__svg,
+.chart-strip__ticks,
+.chart-annual__svg,
+.chart-hours__svg,
+.chart-deviation__bar {
+  display: block;
+  width: 100%;
+}
+
+.chart-strip__svg { height: 100%; }
+.chart-strip__ticks { height: var(--tick-h); }
+.chart-strip__weekend {
+  stroke: var(--c-ink300);
+  stroke-width: 1;
+}
+
+/* The daily standard, printed at the line it draws. */
+.chart-strip__standard {
+  position: absolute;
+  right: 0;
+  top: var(--std-y);
+  transform: translateY(-100%);
+  padding-inline: var(--s-1);
+  background: var(--c-paper);
+  color: var(--c-ink500);
+}
+
+.chart-strip__scrub {
+  position: absolute;
+  inset: 0;
+  min-height: var(--l-hit-target);
+  /* Vertical scrolling still belongs to the page; horizontal drags scrub. */
+  touch-action: pan-y;
+}
+
+/* ── 偏差条 / 年账页 ────────────────────────────────────────────────────── */
+
+.chart-deviation__rows { position: relative; }
+
+.chart-deviation__zero {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--l-hairline);
+  background: var(--c-rule-strong);
+  left: calc(var(--name-w) + (100% - var(--name-w) - var(--fig-w)) / 2);
+}
+
+/* 破版: the month is over standard, so the zero rule leaves the block. */
+.chart-deviation__rows--broken .chart-deviation__zero {
+  top: calc(var(--s-5) * -1);
+  bottom: calc(var(--s-5) * -1);
+  background: var(--c-fig-over);
+}
+
+.chart-deviation__row {
+  display: grid;
+  grid-template-columns: var(--name-w) minmax(0, 1fr) var(--fig-w);
+  align-items: center;
+  gap: var(--s-2);
+  height: var(--row-h);
+}
+
+.chart-deviation__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-deviation__bar { height: var(--bar-h); }
+
+.chart-deviation__ticks {
+  display: grid;
+  grid-template-columns: var(--name-w) minmax(0, 1fr) var(--fig-w);
+  gap: var(--s-2);
+  padding-top: var(--s-2);
+  color: var(--c-ink500);
+}
+.chart-deviation__ticks > span:first-child {
+  grid-column: 2;
+  text-align: left;
+}
+.chart-deviation__ticks > span:last-child {
+  grid-column: 3;
+  text-align: right;
+}
+
+.chart-year__label { font-size: var(--t-label-size); }
+
+/* ── 后悔率 ─────────────────────────────────────────────────────────────── */
+
+/* Unit squares must stay square, so this one scales uniformly. */
+.chart-regret__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.chart-regret__kept { fill: var(--c-ink900); }
+.chart-regret__caption { padding-top: var(--s-3); }
+
+/* ── 订阅年化条 ─────────────────────────────────────────────────────────── */
+
+.chart-annual__svg { height: var(--annual-h); }
+
+/* Segments are parted by ground, not by a fourth colour. */
+.chart-annual__gap {
+  stroke: var(--c-paper);
+  stroke-width: 1;
+}
+
+.chart-annual__list { padding-top: var(--s-3); }
+.chart-annual__list > li + li { margin-top: var(--s-1); }
+
+/* ── 时段散点 ───────────────────────────────────────────────────────────── */
+
+.chart-hours__plot {
+  position: relative;
+  height: var(--hours-h);
+}
+.chart-hours__svg { height: 100%; }
+
+.chart-hours__more {
+  position: absolute;
+  left: var(--col-x);
+  bottom: var(--col-y);
+  transform: translateX(-50%);
+}
+
+.chart-hours__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding-top: var(--s-2);
+  color: var(--c-ink500);
+}

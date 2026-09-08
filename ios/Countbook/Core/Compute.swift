@@ -223,10 +223,13 @@ func regretByCategory(_ L: Ledger, _ today: Day, months: Int = 12) -> [CategoryR
     var rows: [String: CategoryRegret] = [:]
     for e in spendsOf(L) {
         if e.day < since || e.worthIt == nil { continue }
-        var r = rows[e.categoryId] ?? {
+        var r: CategoryRegret
+        if let existing = rows[e.categoryId] {
+            r = existing
+        } else {
             order.append(e.categoryId)
-            return CategoryRegret(categoryId: e.categoryId, judged: 0, notWorth: 0, amount: 0, rate: 0)
-        }()
+            r = CategoryRegret(categoryId: e.categoryId, judged: 0, notWorth: 0, amount: 0, rate: 0)
+        }
         r.judged += 1
         if e.worthIt == false {
             r.notWorth += 1
