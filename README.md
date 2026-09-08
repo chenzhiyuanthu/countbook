@@ -16,7 +16,7 @@
 | | |
 |---|---|
 | **网页版** | <https://chenzhiyuanthu.github.io/countbook/> — PWA，可安装，离线可用 |
-| **iOS** | 原生 SwiftUI，`ios/`，用 Xcode 打开 `ios/Countbook.xcodeproj` 直接跑 |
+| **iOS** | 原生 SwiftUI，零第三方包。`./scripts/ios-ipa.sh` 出一个已签名的 .ipa，装进已注册的设备；或 `open ios/Countbook.xcodeproj` 直接跑 |
 | **多端同步** | 端到端加密。GitHub 私有仓库（无需服务器）或自建服务器 |
 
 ---
@@ -87,8 +87,22 @@ python3 scripts/gen-icons.py      # 重新生成图标
 
 ./scripts/ios-check.sh            # 生成 Xcode 工程并编译到模拟器
 ./scripts/ios-check.sh test       # 跑 iOS 单元测试
+./scripts/ios-run.sh out.png      # 装进模拟器、启动、截图
+./scripts/ios-ipa.sh              # 归档并导出已签名的 .ipa
 open ios/Countbook.xcodeproj      # 或者直接在 Xcode 里跑
 ```
+
+联调测试（真的连 GitHub 私有仓库，默认跳过）：
+
+```bash
+echo '{"token":"'$(gh auth token)'","repo":"chenzhiyuanthu/countbook-vault"}' > .integration.json
+COUNTBOOK_GH_TOKEN=$(gh auth token) COUNTBOOK_GH_REPO=chenzhiyuanthu/countbook-vault \
+  npm run --prefix web test                       # 网页端
+./scripts/ios-check.sh test                       # iOS 端，读同一个 .integration.json
+```
+
+其中 `testReadsAnEventWrittenByTheWebClient` 会让 iOS 端解开网页端写进同一个仓库的那笔记录 ——
+这是"多端"这两个字唯一算数的证明。`.integration.json` 已在 `.gitignore` 里。
 
 网页版推到 `main` 分支即自动部署到 GitHub Pages（`.github/workflows/pages.yml`）。
 
