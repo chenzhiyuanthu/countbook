@@ -1,0 +1,213 @@
+/* The ground the whole app is printed on. Reset, type, and the few layout
+   primitives every screen shares. Component styles live beside their component. */
+
+@import './tokens.css';
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--c-paper);
+  color: var(--c-ink700);
+  font-family: var(--f-sans);
+  font-size: var(--t-body-size);
+  line-height: var(--t-body-leading);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Every figure in the app is tabular: a column of amounts must line up, and a
+     changing digit must not shift the ones beside it. */
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+  overscroll-behavior-y: none;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+  font-variant-numeric: inherit;
+}
+
+button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input, textarea {
+  background: none;
+  border: 0;
+  outline: none;
+}
+
+h1, h2, h3, p, figure { margin: 0; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+
+/* Keyboard focus only. A pointer user tapping a row should not see a ring. */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--c-ink900);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+::selection { background: var(--c-ink900); color: var(--c-paper); }
+
+/* ── type roles ─────────────────────────────────────────────────────── */
+
+.t-hero, .t-screen, .t-section, .t-row, .t-body, .t-label, .t-micro { margin: 0; }
+
+.t-hero {
+  font-size: var(--t-hero-size);
+  font-weight: var(--t-hero-weight);
+  letter-spacing: var(--t-hero-tracking);
+  line-height: var(--t-hero-leading);
+  color: var(--c-ink900);
+}
+.t-screen {
+  font-size: var(--t-screen-size);
+  font-weight: var(--t-screen-weight);
+  letter-spacing: var(--t-screen-tracking);
+  line-height: var(--t-screen-leading);
+  color: var(--c-ink900);
+}
+.t-section {
+  font-size: var(--t-section-size);
+  font-weight: var(--t-section-weight);
+  letter-spacing: var(--t-section-tracking);
+  line-height: var(--t-section-leading);
+  color: var(--c-ink900);
+}
+.t-row {
+  font-size: var(--t-row-size);
+  font-weight: var(--t-row-weight);
+  line-height: var(--t-row-leading);
+  color: var(--c-ink700);
+}
+.t-body { font-size: var(--t-body-size); line-height: var(--t-body-leading); }
+.t-label {
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  letter-spacing: var(--t-label-tracking);
+  line-height: var(--t-label-leading);
+  color: var(--c-ink500);
+  text-transform: uppercase;
+}
+/* Chinese does not have a case to change, and 0.14em opens it too far. */
+.t-label:lang(zh), .t-label--cjk {
+  text-transform: none;
+  letter-spacing: var(--t-label-cjk-tracking);
+}
+.t-micro {
+  font-size: var(--t-micro-size);
+  font-weight: var(--t-micro-weight);
+  letter-spacing: var(--t-micro-tracking);
+  line-height: var(--t-micro-leading);
+  color: var(--c-ink300);
+}
+.t-mono { font-family: var(--f-mono); }
+
+.ink-900 { color: var(--c-ink900); }
+.ink-700 { color: var(--c-ink700); }
+.ink-500 { color: var(--c-ink500); }
+.ink-300 { color: var(--c-ink300); }
+.fig-over { color: var(--c-fig-over); }
+.fig-held { color: var(--c-fig-held); }
+.fig-spared { color: var(--c-fig-spared); }
+.fig-regret { color: var(--c-fig-regret); }
+
+/* ── layout ─────────────────────────────────────────────────────────── */
+
+.app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-paper);
+}
+
+.column {
+  width: 100%;
+  max-width: var(--l-content-max);
+  margin-inline: auto;
+  padding-inline: var(--l-gutter);
+}
+
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--s-10) + env(safe-area-inset-bottom));
+}
+
+/* One device pixel, not one CSS pixel: a 1px rule on a 3× screen is a bar. */
+.rule {
+  border: 0;
+  border-top: 1px solid var(--c-rule);
+  margin: 0;
+}
+.rule--strong { border-top-color: var(--c-rule-strong); }
+@media (min-resolution: 2dppx) {
+  .rule { border-top-width: 0.5px; }
+}
+
+/* 破版 — an overspend is allowed to break the measure. The rule extends past
+   the content column, clipped only by the viewport, so a bad month is a
+   typographic event rather than a colour swap. */
+.rule--broken {
+  margin-inline: calc(var(--l-gutter) * -1);
+  border-top-color: var(--c-fig-over);
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding-block: var(--l-row-pad-y);
+  min-height: var(--l-hit-target);
+}
+.row__grow { flex: 1; min-width: 0; }
+.row__truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-rule);
+  border-radius: var(--r-card);
+}
+
+.stack > * + * { margin-top: var(--s-4); }
+.section { padding-block: var(--s-6); }
+.section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding-bottom: var(--s-3);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ── motion ─────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

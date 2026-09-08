@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy the 花得值 sync server to a host you control.
+# Deploy the 据实 sync server to a host you control.
 #
 #   SSHPASS='...' ./deploy.sh            # password auth (needs sshpass)
 #   ./deploy.sh                          # once your key is installed

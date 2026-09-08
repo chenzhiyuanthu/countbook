@@ -1,0 +1,14 @@
+.app--booting {
+  align-items: center;
+  justify-content: center;
+}
+
+.screen-fallback {
+  min-height: 60dvh;
+}
+
+/* The tab bar and the capture button sit above the scroller, so the scroller
+   pads for them rather than the page growing a footer. */
+.app > .scroll {
+  padding-bottom: calc(var(--s-10) + var(--s-6) + env(safe-area-inset-bottom));
+}

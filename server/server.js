@@ -1,6 +1,6 @@
 'use strict'
 /**
- * 花得值 · Countbook — optional self-hosted sync server.
+ * 据实 · Countbook — optional self-hosted sync server.
  *
  * Node standard library only: node:http, node:sqlite, node:crypto. Nothing to
  * install, nothing in the supply chain, and it starts in a few milliseconds.
