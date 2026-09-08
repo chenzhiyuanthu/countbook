@@ -1,0 +1,36 @@
+{
+  "$comment": "Shared test vectors. web/src/core/core.test.ts and ios/CountbookTests/ParityTests.swift both assert against this file, so a formatting difference between the two platforms fails a build rather than shipping.",
+  "format": [
+    { "fen": 0,        "out": "¥0.00" },
+    { "fen": 5,        "out": "¥0.05" },
+    { "fen": 50,       "out": "¥0.50" },
+    { "fen": 100,      "out": "¥1.00" },
+    { "fen": 12640,    "out": "¥126.40" },
+    { "fen": -8420,    "out": "−¥84.20" },
+    { "fen": 123800,   "out": "¥1,238.00" },
+    { "fen": 84310000, "out": "¥843,100.00" },
+    { "fen": 100000000,"out": "¥1,000,000.00" },
+    { "fen": -1,       "out": "−¥0.01" }
+  ],
+  "parse": [
+    { "in": "12",        "fen": 1200 },
+    { "in": "12.3",      "fen": 1230 },
+    { "in": "12.34",     "fen": 1234 },
+    { "in": "¥12.34",    "fen": 1234 },
+    { "in": "1,234.5",   "fen": 123450 },
+    { "in": "0.05",      "fen": 5 },
+    { "in": "-8.4",      "fen": -840 },
+    { "in": "12.345",    "fen": null },
+    { "in": "abc",       "fen": null },
+    { "in": "",          "fen": null },
+    { "in": ".",         "fen": null }
+  ],
+  "coolingDays": [
+    { "priceFen": 5000,   "days": 1 },
+    { "priceFen": 10000,  "days": 1 },
+    { "priceFen": 10001,  "days": 2 },
+    { "priceFen": 80000,  "days": 8 },
+    { "priceFen": 300000, "days": 14 },
+    { "priceFen": 999999, "days": 14 }
+  ]
+}

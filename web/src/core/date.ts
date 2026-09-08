@@ -73,3 +73,17 @@ export function lastNDays(today: Day, n: number): Day[] {
   for (let i = n - 1; i >= 0; i--) out.push(addDays(today, -i))
   return out
 }
+
+/**
+ * Advance by a billing period. Subscriptions charge on a calendar anchor, not
+ * every 30.44 days: a monthly charge on the 14th falls on the 14th next month,
+ * and one anchored on the 31st lands on the last day of a short month rather
+ * than sliding into the next one.
+ */
+export function addCalendarMonths(day: Day, n: number): Day {
+  const [y = 0, m = 1, d = 1] = day.split('-').map(Number)
+  const target = new Date(y, m - 1 + n, 1)
+  const lastDom = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate()
+  target.setDate(Math.min(d, lastDom))
+  return toDay(target)
+}
