@@ -1,0 +1,183 @@
+/* 设置 — one page that states every rule the app applies to you, with nothing
+   folded away. Colours, spacing, radii and durations come from tokens.css. */
+
+.settings {
+  padding-bottom: var(--s-9);
+}
+
+.settings__title {
+  display: block;
+  padding-block: var(--s-5) var(--s-2);
+}
+
+.settings__section {
+  padding-block: var(--s-6) var(--s-2);
+}
+
+.settings__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding-bottom: var(--s-3);
+}
+
+/* A section's parts are separated by air, not by nested cards (§5.2). */
+.settings__block { padding-top: var(--s-6); }
+.settings__stack > * + * { margin-top: var(--s-4); }
+.settings__section > * + * { margin-top: var(--s-4); }
+
+.settings__hint { color: var(--c-ink700); }
+
+.settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: var(--l-hit-target);
+  padding-block: var(--s-2);
+  border-bottom: var(--l-hairline) solid var(--c-rule);
+}
+
+.settings__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+/* A text action still owns a full hit target; the padding is pulled back out
+   so the words stay on the baseline grid. */
+.settings__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--l-hit-target);
+  padding-inline: var(--s-2);
+  margin-inline: calc(var(--s-2) * -1);
+  color: var(--c-ink900);
+  font-weight: 500;
+}
+.settings__link:disabled { color: var(--c-ink300); cursor: default; }
+
+.settings__external {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--l-hit-target);
+  color: var(--c-ink900);
+  text-decoration-thickness: var(--l-hairline);
+  text-underline-offset: var(--s-1);
+}
+
+/* ── the standard editor ────────────────────────────────────────────── */
+
+.settings__propose {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.settings__cat { border-bottom: var(--l-hairline) solid var(--c-rule); }
+
+.settings__cat-line {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: var(--l-hit-target);
+}
+.settings__cat-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--c-ink700);
+}
+
+/* The 96 amount gutter, present on every list in the app (§4.1). */
+.settings__amount {
+  flex: none;
+  width: var(--pr-gutter-amount);
+  padding-block: var(--s-2);
+  text-align: right;
+  color: var(--c-ink900);
+  font-family: var(--f-mono);
+}
+.settings__amount::placeholder { color: var(--c-ink500); }
+
+.settings__cat .settings__propose { padding-bottom: var(--s-2); }
+
+.settings__name {
+  flex: 1;
+  min-width: 0;
+  padding-block: var(--s-2);
+  color: var(--c-ink900);
+}
+
+.settings__revision {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  min-height: var(--l-hit-target);
+  padding-block: var(--s-2);
+  border-bottom: var(--l-hairline) solid var(--c-rule);
+}
+
+/* ── sync ───────────────────────────────────────────────────────────── */
+
+.settings__fingerprint {
+  display: block;
+  width: 100%;
+  min-height: var(--l-hit-target);
+  padding-block: var(--s-2);
+  text-align: left;
+  color: var(--c-ink700);
+}
+
+.settings__device {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  min-height: var(--l-hit-target);
+  padding-block: var(--s-2);
+  border-bottom: var(--l-hairline) solid var(--c-rule);
+}
+.settings__device > .t-body { flex: 1; min-width: 0; }
+
+/* ── data ───────────────────────────────────────────────────────────── */
+
+/* The file input is the focusable control; the label carries the ring so the
+   pair reads as one button. */
+.settings__file {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--l-hit-target);
+  padding-inline: var(--s-4);
+  border-radius: var(--r-card);
+  color: var(--c-ink900);
+  font-weight: 500;
+  cursor: pointer;
+}
+.settings__file:active { background: var(--c-surface-sunken); }
+.settings__file:focus-within {
+  outline: 2px solid var(--c-ink900);
+  outline-offset: 2px;
+}
+.settings__file input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.settings__about {
+  padding-top: var(--s-7);
+  color: var(--c-ink500);
+}
+
+@media (min-resolution: 2dppx) {
+  .settings__row,
+  .settings__cat,
+  .settings__revision,
+  .settings__device { border-bottom-width: 0.5px; }
+}

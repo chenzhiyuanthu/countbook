@@ -1,0 +1,400 @@
+/* 账页 — the permanent record. Dense rows, a rule under every one of them, and
+   a correction printed beneath the line it corrects rather than in place of it. */
+
+.ledger {
+  /* The amount column is a column: it is the same width on every row of the
+     app, and it is never allowed to shrink or truncate. 96 = 64 + 32. */
+  --ledger-amount: calc(var(--s-10) + var(--s-7));
+  padding-block: var(--s-4) var(--s-8);
+}
+
+.ledger__defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* ── header ─────────────────────────────────────────────────────────── */
+
+.ledger__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding-bottom: var(--s-4);
+}
+
+.ledger__title {
+  color: var(--c-ink500);
+}
+
+.ledger__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-inline-start: calc(var(--s-3) * -1);
+}
+
+.ledger__step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--l-hit-target);
+  height: var(--l-hit-target);
+  color: var(--c-ink700);
+}
+.ledger__step:disabled {
+  color: var(--c-rule-strong);
+  cursor: default;
+}
+
+.ledger__month {
+  color: var(--c-ink900);
+}
+
+.ledger__figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.ledger__state {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+/* --t-micro's own colour is ink-300, which at 10px does not carry. */
+.ledger__standard {
+  color: var(--c-ink500);
+}
+
+/* The 结 seal: a letterpressed block, not a badge and not a colour. */
+.ledger__seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--l-hit-target);
+  min-height: var(--l-hit-target);
+  color: var(--c-ink500);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  letter-spacing: var(--t-label-cjk-tracking);
+}
+.ledger__seal > span[aria-hidden] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--s-5);
+  height: var(--s-5);
+  background: var(--c-surface-sunken);
+  border-radius: 0;
+  border-top: var(--l-hairline) solid var(--c-rule-strong);
+  border-left: var(--l-hairline) solid var(--c-rule-strong);
+}
+
+.ledger__hint {
+  padding-block: var(--s-3);
+}
+
+/* ── search and filters ─────────────────────────────────────────────── */
+
+.ledger__search {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: var(--l-hit-target);
+  border-bottom: var(--l-hairline) solid var(--c-rule);
+}
+
+.ledger__search-mark {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ledger__search-input {
+  flex: 1;
+  min-width: 0;
+  padding-block: var(--s-2);
+  color: var(--c-ink900);
+}
+.ledger__search-input::placeholder {
+  color: var(--c-ink500);
+}
+.ledger__search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.ledger__search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--l-hit-target);
+  height: var(--l-hit-target);
+  color: var(--c-ink500);
+}
+
+.ledger__syntax {
+  color: var(--c-ink500);
+  padding-top: var(--s-2);
+}
+
+.ledger__filters {
+  display: flex;
+  gap: var(--s-4);
+  overflow-x: auto;
+  padding-block: var(--s-3);
+  scrollbar-width: none;
+}
+.ledger__filters::-webkit-scrollbar { display: none; }
+
+/* A filter is a word with a rule under it. There are no pills in this product. */
+.ledger__word {
+  flex: none;
+  min-height: var(--l-hit-target);
+  padding-block: var(--s-2);
+  font-size: var(--t-body-size);
+  line-height: var(--t-body-leading);
+  color: var(--c-ink500);
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.ledger__word[aria-pressed='true'] {
+  color: var(--c-ink900);
+  /* No --rule-active token exists; ink-500 is the same value in both themes. */
+  border-bottom-color: var(--c-ink500);
+}
+
+/* ── day section ────────────────────────────────────────────────────── */
+
+.ledger__day {
+  padding-top: var(--s-6);
+}
+
+.ledger__dayhead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin: 0;
+  padding-block: var(--s-2);
+  background: var(--c-paper);
+  border-bottom: var(--l-hairline) solid var(--c-rule-strong);
+  font-weight: 400;
+}
+
+.ledger__daydate {
+  font-size: var(--t-label-size);
+  letter-spacing: 0;
+}
+
+.ledger__daytotal {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: var(--ledger-amount);
+  justify-content: flex-end;
+  text-align: right;
+}
+
+/* Over the daily standard, marked by hatch rather than by red: this screen has
+   no chromatic figure and is not going to acquire one. */
+.ledger__over {
+  flex: none;
+}
+
+.ledger__nospend {
+  padding-block: var(--l-row-pad-y);
+}
+
+/* ── row ────────────────────────────────────────────────────────────── */
+
+.ledger__entry {
+  display: flex;
+  flex-direction: column;
+}
+
+.ledger__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: var(--l-hit-target);
+  padding-block: var(--l-row-pad-y);
+  text-align: left;
+  transition: background-color var(--d-row-fade) linear;
+}
+.ledger__row:active {
+  background: var(--c-surface-sunken);
+}
+
+.ledger__time {
+  flex: none;
+  width: var(--s-8);
+  font-size: var(--t-label-size);
+  letter-spacing: 0;
+}
+
+.ledger__category {
+  flex: none;
+  white-space: nowrap;
+}
+
+.ledger__note {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 必 → 想 → 冲: a value ramp, never a hue ramp. */
+.ledger__stamp {
+  flex: none;
+  width: var(--s-4);
+  text-align: center;
+  font-size: var(--t-label-size);
+  letter-spacing: 0;
+}
+.ledger__stamp--need { color: var(--c-ink500); font-weight: 500; }
+.ledger__stamp--want { color: var(--c-ink700); font-weight: 500; }
+.ledger__stamp--impulse { color: var(--c-ink900); font-weight: 600; }
+
+.ledger__amount {
+  flex: none;
+  min-width: var(--ledger-amount);
+  text-align: right;
+  white-space: nowrap;
+}
+.ledger__amount--voided {
+  text-decoration: line-through;
+  text-decoration-thickness: var(--l-hairline);
+  text-decoration-color: var(--c-ink500);
+}
+
+/* A correction shares its parent's rule: the pair is one record. */
+.ledger__sub {
+  padding-inline-start: calc(var(--s-8) + var(--s-3));
+  padding-bottom: var(--s-2);
+  font-size: var(--t-label-size);
+  letter-spacing: 0;
+  line-height: var(--t-body-leading);
+}
+
+.ledger__rule {
+  width: 100%;
+}
+
+.ledger__entry--printed .ledger__sub {
+  animation: ledger-print var(--d-row-print) var(--ease) both;
+}
+
+@keyframes ledger-print {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ledger__link {
+  align-self: center;
+  min-height: var(--l-hit-target);
+  padding-inline: var(--s-3);
+  font-size: var(--t-body-size);
+  color: var(--c-ink700);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: var(--l-hairline);
+}
+.ledger__link:hover {
+  color: var(--c-ink900);
+}
+
+/* ── detail sheet ───────────────────────────────────────────────────── */
+
+.ledger__detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5) calc(var(--s-6) + env(safe-area-inset-bottom));
+}
+
+.ledger__detail-figure {
+  text-align: right;
+}
+
+.ledger__detail-line,
+.ledger__detail-meta {
+  text-align: right;
+}
+
+.ledger__detail-meta {
+  font-size: var(--t-label-size);
+  letter-spacing: 0;
+}
+
+.ledger__pick {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.ledger__pick-label {
+  color: var(--c-ink500);
+}
+
+.ledger__pick-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+}
+
+.ledger__date {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  color: var(--c-ink500);
+}
+
+.ledger__date-input {
+  min-height: var(--l-hit-target);
+  padding: var(--s-3);
+  background: var(--c-surface-sunken);
+  border-radius: var(--r-field);
+  color: var(--c-ink900);
+  font-size: var(--t-body-size);
+}
+
+/* An error is a fact with a rule beside it — never red, never a dialog. */
+.ledger__error {
+  padding: var(--s-2) var(--s-3);
+  border-left: 2px solid var(--c-ink900);
+}
+
+.ledger__quote {
+  padding: var(--s-2) var(--s-3);
+  border-left: 2px solid var(--c-rule);
+}
+
+.ledger__meta-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: var(--l-hit-target);
+}
+
+.ledger__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding-top: var(--s-2);
+}
+
+/* A pointer has finer aim than a thumb; the page gets denser, not looser. */
+@media (min-width: 720px) and (pointer: fine) {
+  .ledger__row { padding-block: var(--s-3); }
+}

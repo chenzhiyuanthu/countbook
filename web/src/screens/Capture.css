@@ -1,0 +1,197 @@
+/* 记一笔. The load-bearing path: everything here exists to keep the median
+   entry under six seconds, and the one deliberate delay — the stamp — is the
+   only thing on the sheet that cannot be skipped. */
+
+.capture {
+  /* Two DESIGN.md constants the generated token file does not emit: the key
+     height of §5.8 and the caret cadence of §5.5. */
+  --capture-key-h: calc(var(--s-8) + var(--s-4));
+  --capture-caret: 1.06s;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+/* ── head: the day, and whether the sheet stays open ─────────────────── */
+
+.capture__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.capture__date,
+.capture__keep {
+  min-height: var(--l-hit-target);
+  padding-inline: var(--s-2);
+  margin-inline: calc(var(--s-2) * -1);
+  color: var(--c-ink500);
+}
+.capture__date { font-size: var(--t-body-size); }
+.capture__keep[aria-pressed='true'] {
+  color: var(--c-ink900);
+  font-weight: 600;
+  box-shadow: inset 0 calc(var(--l-hairline) * -1) 0 0 var(--c-ink900);
+}
+
+.capture__dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-4);
+}
+.capture__quick,
+.capture__pick {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--l-hit-target);
+  color: var(--c-ink700);
+}
+/* Selection is an underline, never a fill (§2.1 R5). */
+.capture__quick[aria-pressed='true'] {
+  color: var(--c-ink900);
+  box-shadow: inset 0 calc(var(--l-hairline) * -1) 0 0 var(--c-ink900);
+}
+.capture__pick input { color: var(--c-ink700); }
+
+/* ── the figure being keyed ──────────────────────────────────────────── */
+
+.capture__amount {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: var(--s-2);
+  padding-top: var(--s-2);
+}
+/* The one place an integer is not ink-900: an untouched amount is a
+   placeholder, and a placeholder is not a figure yet (§5.5). */
+.capture__amount--empty .money { --money-ink: var(--c-ink300); }
+
+.capture__caret {
+  flex: none;
+  width: var(--l-hairline);
+  align-self: center;
+  height: var(--s-6);
+  background: var(--c-ink500);
+  animation: capture-caret var(--capture-caret) steps(2) infinite;
+}
+@keyframes capture-caret {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* The consequence of the keystroke, printed before the keystroke commits.
+   The wording does not change when the result goes negative — the figure
+   changes colour and says it on its own. */
+.capture__consequence {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: var(--s-2);
+}
+
+/* ── categories: words, no icons, no colour (§2.1 R6) ────────────────── */
+
+.capture__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-1);
+}
+.capture__cat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--l-hit-target);
+  padding-inline: var(--s-1);
+  border: var(--l-hairline) solid transparent;
+  border-radius: var(--r-field);
+  color: var(--c-ink700);
+}
+.capture__cat[aria-checked='true'] {
+  border-color: var(--c-ink900);
+  color: var(--c-ink900);
+  font-weight: 500;
+}
+
+/* ── stamp ───────────────────────────────────────────────────────────── */
+
+.capture__stamp { display: block; }
+.capture__tier {
+  padding-top: var(--s-2);
+  color: var(--c-ink500);
+}
+
+.capture__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+/* ── keypad ──────────────────────────────────────────────────────────── */
+
+/* Full bleed to the sheet edges, with the hairline grid drawn as the gap so a
+   key and its rule are the same object. */
+.capture__keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--l-hairline);
+  margin-inline: calc(var(--l-gutter) * -1);
+  background: var(--c-rule);
+  border-block: var(--l-hairline) solid var(--c-rule);
+}
+.capture__key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--capture-key-h);
+  background: var(--c-surface-sunken);
+  color: var(--c-ink900);
+  font-size: calc(var(--t-screen-size) - var(--s-4));
+  font-weight: 400;
+  font-variant-numeric: tabular-nums lining-nums;
+  transition: background-color var(--d-row-fade) linear;
+}
+.capture__key:active:not(:disabled) { background: var(--c-surface); }
+.capture__key:disabled { color: var(--c-ink300); cursor: default; }
+.capture__key--icon { color: var(--c-ink900); }
+
+/* ── commit ──────────────────────────────────────────────────────────── */
+
+.capture__commit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+}
+.capture__commit > div { width: 100%; }
+
+/* 挂起 — held, not spent. The one bar in the product that is an outline
+   rather than a fill, because the cooling path is a decision, not a commit. */
+.capture__hold.pr-btn--quiet {
+  background: var(--c-surface);
+  border: var(--l-hairline) solid var(--c-fig-held);
+  color: var(--c-fig-held);
+  font-weight: 600;
+}
+
+/* The escape from the cooling period exists, and is one rank quieter. */
+.capture__link {
+  min-height: var(--l-hit-target);
+  padding-inline: var(--s-2);
+  font-size: var(--t-body-size);
+  color: var(--c-ink700);
+  text-underline-offset: 2px;
+  text-decoration: underline solid var(--c-ink500) var(--l-hairline);
+}
+.capture__link:active { text-decoration-color: var(--c-ink900); }
+
+@media (min-resolution: 2dppx) {
+  .capture__caret { width: 0.5px; }
+}
+
+/* The caret is information about where the next digit lands, so it stays; only
+   its blink is a depiction. */
+@media (prefers-reduced-motion: reduce) {
+  .capture__caret { animation: none; }
+}

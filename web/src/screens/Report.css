@@ -1,0 +1,118 @@
+/* 报告 — a statement, not a dashboard: one column, ruled sections, and every
+   figure printed as type. No card sits on this page; the rules do the work. */
+
+.report {
+  padding-bottom: var(--s-8);
+}
+
+.report__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: var(--l-hit-target);
+  padding-block: var(--s-2);
+}
+
+.report__month {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  /* The chevrons carry their own 16 of padding; pulling the group back keeps
+     the arrow, not its hit area, on the gutter. */
+  margin-right: calc(var(--s-4) * -1);
+}
+
+/* Zero-padded and tabular, so stepping through months does not shift the
+   chevrons under the reader's thumb. */
+.report__monthLabel {
+  min-width: calc(var(--s-10) + var(--s-5));
+  text-align: center;
+}
+
+.report__figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-7);
+}
+
+.report__figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.report__wish {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding-top: var(--s-5);
+}
+
+/* The conversion line belongs to the regret figure above it, and takes its
+   lead grey with it. */
+.report__wishLine {
+  color: var(--c-fig-regret);
+}
+
+/* A withheld statistic keeps the height its chart would have taken, so the
+   page does not reflow on the day the sample arrives. */
+.report__gate {
+  min-height: calc(var(--s-10) + var(--s-7));
+  margin: 0;
+  padding-block: var(--s-3);
+}
+.report__gate--plot {
+  min-height: calc(var(--s-10) + var(--s-8));
+}
+
+.report__note {
+  padding-top: var(--s-3);
+}
+
+/* ── 类目表 ─────────────────────────────────────────────────────────── */
+
+.report__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.report__table th,
+.report__table td {
+  padding-block: var(--s-3);
+  padding-inline: 0;
+  text-align: left;
+  vertical-align: baseline;
+  font-weight: inherit;
+}
+
+.report__table thead th {
+  padding-block: 0 var(--s-3);
+  white-space: nowrap;
+}
+
+.report__table tbody th,
+.report__table tbody td {
+  border-top: var(--l-hairline) solid var(--c-rule);
+}
+
+.report__table th.report__num,
+.report__table td.report__num {
+  text-align: right;
+  white-space: nowrap;
+  padding-left: var(--s-2);
+}
+
+.report__cat {
+  max-width: calc(var(--s-10) + var(--s-4));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-resolution: 2dppx) {
+  .report__table tbody th,
+  .report__table tbody td {
+    border-top-width: 0.5px;
+  }
+}

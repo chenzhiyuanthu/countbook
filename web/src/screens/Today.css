@@ -1,0 +1,207 @@
+/* 今日. One figure, its derivation, and the month it sits in. Every value here
+   is a token; the two literals are the device-pixel hairline rule that base.css
+   already establishes. */
+
+.today {
+  padding-block: var(--s-7) var(--s-6);
+}
+
+/* ── hero ───────────────────────────────────────────────────────────── */
+
+.today__hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding-bottom: var(--s-4);
+}
+
+.today__heroLabel {
+  display: block;
+}
+
+/* Nothing is known yet, so nothing is asserted: a rule where the figure will be. */
+.today__blank {
+  color: var(--c-ink300);
+}
+
+/* The one composition event in the product. When the hero breaks the measure,
+   the month strip's baseline must not: at most one breakout per screen
+   (DESIGN.md §4.6), and the hero outranks the strip. */
+.today--over .chart-strip .rule--broken {
+  margin-inline: 0;
+  border-top-color: var(--c-rule-strong);
+}
+
+/* ── provenance ─────────────────────────────────────────────────────── */
+
+.today__provenance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: var(--l-hit-target);
+  padding-block: var(--s-3);
+  text-align: left;
+}
+
+.today__provenanceText {
+  flex: 1;
+  min-width: 0;
+}
+
+.today__chevron {
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+
+.today__derivation {
+  margin: 0;
+  padding-bottom: var(--s-3);
+  animation: today-fade var(--d-row-fade) var(--ease) both;
+}
+
+.today__derivationRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding-block: var(--s-2);
+}
+
+.today__derivationValue {
+  margin: 0;
+  flex: none;
+  min-width: var(--pr-gutter-amount);
+  text-align: right;
+  color: var(--c-ink700);
+}
+
+@keyframes today-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* A fact about the days ahead, not a verdict on the days behind — so it is
+   ink, never the red the figure above it already carries. */
+.today__trajectory {
+  color: var(--c-ink500);
+  padding-bottom: var(--s-3);
+}
+
+.today__firstRun {
+  padding-block: var(--s-3);
+}
+
+.today__firstRunLine {
+  color: var(--c-ink700);
+}
+
+.today__firstRunHint {
+  color: var(--c-ink500);
+}
+
+/* ── month strip ────────────────────────────────────────────────────── */
+
+.today__stripReadout {
+  flex: none;
+  text-align: right;
+}
+
+/* The withheld chart keeps the height the chart would have taken, so the page
+   does not jump on the day the third one arrives. */
+.today__gate {
+  display: flex;
+  align-items: center;
+  min-height: calc(var(--s-10) + var(--s-7));
+  color: var(--c-ink500);
+}
+
+/* ── strips and conditional lines ───────────────────────────────────── */
+
+.today__leak {
+  padding-block: var(--s-4);
+  color: var(--c-ink700);
+}
+
+.today__line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: var(--l-hit-target);
+  padding-block: var(--s-3);
+  text-align: left;
+}
+
+.today__lineTap {
+  transition: background-color var(--d-row-fade) linear;
+}
+
+.today__lineTap:active {
+  background: var(--c-surface-sunken);
+}
+
+/* ── today's entries ────────────────────────────────────────────────── */
+
+.today__entry + .today__entry {
+  border-top: 1px solid var(--c-rule);
+}
+
+@media (min-resolution: 2dppx) {
+  .today__entry + .today__entry { border-top-width: 0.5px; }
+}
+
+.today__time {
+  flex: none;
+  width: var(--s-8);
+  font-family: var(--f-mono);
+  font-size: var(--t-label-size);
+  color: var(--c-ink500);
+}
+
+.today__category {
+  flex: none;
+  color: var(--c-ink700);
+}
+
+.today__note {
+  color: var(--c-ink500);
+}
+
+/* 必 → 想 → 冲: the stamp darkens as the intent gets harder to defend, and it
+   never turns red. */
+.today__stamp {
+  flex: none;
+  width: var(--s-4);
+  text-align: center;
+  font-size: var(--t-label-size);
+  color: var(--c-ink500);
+}
+
+.today__stamp--need { color: var(--c-ink500); }
+.today__stamp--want { color: var(--c-ink700); }
+.today__stamp--impulse { color: var(--c-ink900); font-weight: 600; }
+
+.today__amount {
+  flex: none;
+  min-width: var(--pr-gutter-amount);
+  text-align: right;
+}
+
+.today__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  padding-block: var(--s-6);
+}
+
+.today__emptyAction {
+  min-height: var(--l-hit-target);
+  color: var(--c-ink900);
+  text-decoration: underline;
+  text-underline-offset: var(--s-1);
+}

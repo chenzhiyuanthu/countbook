@@ -1,0 +1,167 @@
+/* 周日审判 — a full-screen deck on paper. No card border and no ground: the
+   figure and the rule under the verdicts are the only structure the page has. */
+
+.reckoning {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-paper);
+  overflow-x: clip;
+  padding-bottom: env(safe-area-inset-bottom);
+  animation: reckoning-enter var(--d-sheet-present) var(--ease) both;
+}
+
+@keyframes reckoning-enter {
+  from { opacity: 0; transform: translateY(var(--s-6)); }
+  to { opacity: 1; transform: none; }
+}
+
+.reckoning__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding-top: max(var(--s-2), env(safe-area-inset-top));
+}
+
+.reckoning__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--l-hit-target);
+  height: var(--l-hit-target);
+  /* The gutter belongs to the text column; the glyph aligns to it. */
+  margin-left: calc(var(--s-3) * -1);
+  color: var(--c-ink700);
+}
+
+.reckoning__progress { color: var(--c-ink500); }
+
+.reckoning__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--s-3);
+  padding-block: var(--s-7);
+}
+
+.reckoning__carryover { color: var(--c-ink500); }
+
+/* verdictSwipe: ±120 is the distance DESIGN.md §6.3 gives this transition, and
+   it is a property of the motion rather than of the layout. */
+.reckoning__card { --reckoning-swipe: 120px; }
+
+.reckoning__card--worth {
+  animation: reckoning-worth var(--d-verdict-swipe) var(--ease) both;
+}
+.reckoning__card--notworth {
+  animation: reckoning-notworth var(--d-verdict-swipe) var(--ease) both;
+}
+
+@keyframes reckoning-worth {
+  to { transform: translateX(calc(var(--reckoning-swipe) * -1)); opacity: 0; }
+}
+@keyframes reckoning-notworth {
+  to { transform: translateX(var(--reckoning-swipe)); opacity: 0; }
+}
+
+.reckoning__amount { text-align: right; }
+
+.reckoning__category {
+  margin-top: var(--s-3);
+  color: var(--c-ink700);
+}
+.reckoning__note { color: var(--c-ink500); }
+.reckoning__date { color: var(--c-ink300); }
+
+.reckoning__quoteLabel {
+  margin-top: var(--s-5);
+  color: var(--c-ink500);
+}
+.reckoning__quote {
+  margin-top: var(--s-1);
+  padding-left: var(--s-3);
+  border-left: 2px solid var(--c-rule);
+  color: var(--c-ink700);
+}
+
+/* The hairline a 不值 leaves in the position the card occupied. The one place
+   in the product the over tone is allowed on something that is not a figure. */
+.reckoning__scar {
+  border: 0;
+  border-top: var(--l-hairline) solid var(--c-fig-over);
+  margin: 0;
+}
+
+.reckoning__statement { color: var(--c-ink700); }
+
+.reckoning__foot {
+  padding-bottom: var(--s-5);
+}
+
+.reckoning__error {
+  padding-bottom: var(--s-3);
+  color: var(--c-ink700);
+}
+
+.reckoning__actions {
+  display: flex;
+  border-top: var(--l-hairline) solid var(--c-rule-strong);
+  border-bottom: var(--l-hairline) solid var(--c-rule-strong);
+}
+
+.reckoning__verdict {
+  flex: 1;
+  /* The flat action is 52 tall: the hit target plus one spacing step. */
+  min-height: calc(var(--l-hit-target) + var(--s-2));
+  font-size: var(--t-body-size);
+  font-weight: 500;
+  line-height: var(--t-body-leading);
+  color: var(--c-ink900);
+}
+.reckoning__verdict + .reckoning__verdict {
+  border-left: var(--l-hairline) solid var(--c-rule);
+}
+.reckoning__verdict:active { background: var(--c-surface-sunken); }
+
+.reckoning__warning {
+  padding-top: var(--s-3);
+  color: var(--c-ink700);
+  text-align: center;
+}
+
+.reckoning__links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: var(--s-2);
+}
+
+.reckoning__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--l-hit-target);
+  padding-inline: var(--s-4);
+  font-size: var(--t-body-size);
+  color: var(--c-ink700);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--c-ink500);
+  text-underline-offset: 2px;
+}
+.reckoning__link:hover { text-decoration-color: var(--c-ink900); }
+
+.reckoning__summary > * + * { margin-top: var(--s-3); }
+
+.reckoning__result {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+}
+
+.reckoning__finish { padding-top: var(--s-6); }

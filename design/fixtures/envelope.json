@@ -1,0 +1,10 @@
+{
+  "$comment": "A shared acceptance test for the vault envelope (web/src/sync/crypto.ts, ios/Countbook/Sync/Crypto.swift). fromWeb was produced by the web client and is opened by the Swift tests; fromSwift was produced by the Swift client and is opened by web/src/sync/crypto.test.ts. The passphrase carries a decomposed e-acute on purpose: both platforms must normalise it before deriving. The iteration count is deliberately low so the fixture is cheap to open; the shipping default is 600000.",
+  "passphrase": "correct horse battery staple 世界 café",
+  "saltBase64": "AxQlNkdYaXqLnK2+z+DxAg==",
+  "iterations": 1000,
+  "plaintext": "{\"hello\":\"世界\",\"fen\":12640,\"note\":\"一杯咖啡\"}",
+  "fingerprint": "131629107cfea6ee",
+  "fromWeb": "Q0JLMQEBAAAD6AMUJTZHWGl6i5ytvs/g8QIHTgsL+pSx7K91fngmKPlAknIFDx0i7VbWd9Q+o7Fiu48oMs9vMEmZkYmh8AFRE+YPrn1tdxYI7/Rxhv/E3wRejfloNb06ZY9LivohFUvWsQ==",
+  "fromSwift": "Q0JLMQEBAAAD6AMUJTZHWGl6i5ytvs/g8QKaVrOxJmpRTUjxt+S9vPmOvjyMxLF/L7paxpeJ/aOtxtWjrYweRwsIfSaSwgmoevo/qYnhxgEo5NxkSp5ARmYTBtlsG81qh6izi5MQ9L+1Yg=="
+}

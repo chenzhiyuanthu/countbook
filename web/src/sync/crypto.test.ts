@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { webcrypto } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import {
   CryptoError, DEFAULT_ITERATIONS, deriveKey, formatFingerprint, fromBase64, open, readHeader, seal, toBase64,
 } from './crypto'
@@ -95,5 +96,29 @@ describe('vault envelope', () => {
     const big = new Uint8Array(3_000_000).map((_, i) => i & 0xff)
     expect(Array.from(fromBase64(toBase64(big)).subarray(0, 4))).toEqual([0, 1, 2, 3])
     expect(fromBase64(toBase64(big)).length).toBe(big.length)
+  })
+})
+
+// design/fixtures/envelope.json is a shared acceptance test: the Swift client
+// opens the envelope this implementation produced, and this opens the one the
+// Swift client produced. A change to the wire format on either side fails here.
+describe('cross-platform envelope fixture', () => {
+  const fx = JSON.parse(
+    readFileSync(new URL('../../../design/fixtures/envelope.json', import.meta.url), 'utf8'),
+  ) as { passphrase: string; saltBase64: string; iterations: number; plaintext: string; fingerprint: string; fromWeb: string; fromSwift: string }
+  const key = () => deriveKey(fx.passphrase, fromBase64(fx.saltBase64), fx.iterations)
+
+  it('derives the fingerprint the Swift client derives', async () => {
+    expect((await key()).fingerprint).toBe(fx.fingerprint)
+  })
+
+  it('opens an envelope sealed by the Swift client', async () => {
+    expect(await open(await key(), fromBase64(fx.fromSwift))).toBe(fx.plaintext)
+  })
+
+  it('still produces the envelope the Swift tests open', async () => {
+    const box = fromBase64(fx.fromWeb)
+    expect(await open(await key(), box)).toBe(fx.plaintext)
+    expect(readHeader(box).iterations).toBe(fx.iterations)
   })
 })

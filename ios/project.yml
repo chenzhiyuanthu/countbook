@@ -48,6 +48,8 @@ targets:
       # one file rather than a copy that could drift.
       - path: ../design/fixtures/money.json
         buildPhase: resources
+      - path: ../design/fixtures/envelope.json
+        buildPhase: resources
     dependencies:
       - target: Countbook
     settings:

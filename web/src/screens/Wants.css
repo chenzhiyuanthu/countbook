@@ -1,0 +1,193 @@
+/* 待购 and 订阅: the two things that are commitments rather than records. Both
+   are lists of rows on paper, so almost everything here is spacing; the only
+   drawn objects are the depleting arc and the flat action pair. */
+
+.wants {
+  padding-block: var(--s-6);
+}
+
+.wants__section + .wants__section {
+  padding-top: var(--s-8);
+}
+
+.wants__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding-bottom: var(--s-6);
+}
+
+.wants__title {
+  color: var(--c-ink900);
+  padding-bottom: var(--s-5);
+}
+
+.wants__figure {
+  display: block;
+  padding-block: var(--s-1);
+}
+
+/* 绿色要挣得: nothing given up yet is not a spared figure, it is a zero. */
+.wants__figure--zero .money {
+  --money-ink: var(--c-ink300);
+}
+
+.wants__notice {
+  padding-top: var(--s-2);
+}
+
+.wants__group {
+  padding-top: var(--s-6);
+}
+
+.wants__bar {
+  padding-top: var(--s-5);
+  padding-bottom: var(--s-6);
+}
+
+.wants__row {
+  border-bottom: 1px solid var(--c-rule);
+}
+@media (min-resolution: 2dppx) {
+  .wants__row { border-bottom-width: 0.5px; }
+}
+
+.wants__amount {
+  flex: none;
+  min-width: var(--pr-gutter-amount);
+  text-align: right;
+}
+
+.wants__annual-label {
+  display: block;
+}
+
+.wants__date {
+  flex: none;
+  width: var(--s-8);
+}
+
+/* ── 待购 ───────────────────────────────────────────────────────────── */
+
+.wants__unlocked {
+  padding-bottom: var(--s-4);
+}
+
+.wants__question {
+  padding-top: var(--s-3);
+}
+
+.wants__stale {
+  padding-top: var(--s-1);
+}
+
+.wants__cooling {
+  align-items: center;
+}
+
+.wants__arc {
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+
+.wants__cooling-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+/* The countdown sets at 12; the generated scale has no 12, and the label size
+   is the nearest token to it. */
+.wants__countdown {
+  font-size: var(--t-label-size);
+}
+
+.wants__detail {
+  padding-top: var(--s-1);
+}
+
+.wants__sub {
+  padding-bottom: var(--s-4);
+}
+
+.wants__flag {
+  padding-left: var(--s-2);
+  font-size: var(--t-label-size);
+}
+
+.wants__row-actions {
+  display: flex;
+  gap: var(--s-5);
+  padding-top: var(--s-1);
+}
+
+.wants__add {
+  padding-top: var(--s-6);
+}
+
+/* ── text link (DESIGN.md §5.6) ─────────────────────────────────────── */
+
+.wants__link {
+  align-self: flex-start;
+  min-height: var(--l-hit-target);
+  display: inline-flex;
+  align-items: center;
+  color: var(--c-ink700);
+  font-size: var(--t-body-size);
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--c-ink500);
+  text-underline-offset: 2px;
+}
+.wants__link:active { color: var(--c-ink900); }
+
+/* ── flat action pair (DESIGN.md §5.6) ──────────────────────────────── */
+
+.wants__flat {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--c-rule-strong);
+  margin-top: var(--s-3);
+}
+
+.wants__flat-action {
+  /* 52 = --s-8 + --s-3, the bar height every action in the product shares. */
+  min-height: calc(var(--s-8) + var(--s-3));
+  color: var(--c-ink900);
+  font-weight: 500;
+  transition: background-color var(--d-row-fade) linear;
+}
+.wants__flat-action + .wants__flat-action {
+  border-left: 1px solid var(--c-rule);
+}
+.wants__flat-action:active { background: var(--c-surface-sunken); }
+
+/* ── the held bar (DESIGN.md §5.6) ──────────────────────────────────── */
+
+.wants__sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.wants__held {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: calc(var(--s-8) + var(--s-3));
+  border-radius: var(--r-card);
+  background: var(--c-surface);
+  border: 1px solid var(--c-fig-held);
+  color: var(--c-fig-held);
+  font-weight: 600;
+  transition: background-color var(--d-row-fade) linear;
+}
+.wants__held:active:not(:disabled) { background: var(--c-surface-sunken); }
+.wants__held:disabled {
+  cursor: default;
+  border-color: var(--c-rule);
+  color: var(--c-ink300);
+}

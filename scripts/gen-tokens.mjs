@@ -35,7 +35,7 @@ const radius = Object.entries(T.radius)
 const type = Object.entries(T.type)
   .filter(([k]) => !k.startsWith('$'))
   .flatMap(([k, v]) => [
-    cssVar(`t-${kebab(k)}-size`, `${(v.size / 16).toFixed(4).replace(/0+$/, '')}rem`),
+    cssVar(`t-${kebab(k)}-size`, `${(v.size / 16).toFixed(4).replace(/\.?0+$/, '')}rem`),
     cssVar(`t-${kebab(k)}-weight`, String(v.weight)),
     cssVar(`t-${kebab(k)}-tracking`, `${v.tracking}em`),
     cssVar(`t-${kebab(k)}-leading`, String(v.leading)),
