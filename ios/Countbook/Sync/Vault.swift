@@ -125,7 +125,12 @@ enum VaultStoreKind: String, Codable, Sendable {
 }
 
 struct ConflictError: Error, LocalizedError {
-    var errorDescription: String? { "shard changed underneath us" }
+    /// What the server said. A bare "conflict" is unactionable in a log.
+    var detail: String = ""
+
+    var errorDescription: String? {
+        detail.isEmpty ? "shard changed underneath us" : "shard changed underneath us — \(detail)"
+    }
 }
 
 /// Pull what changed, merge, push what is ours.

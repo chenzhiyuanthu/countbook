@@ -40,6 +40,7 @@ export class GitHubError extends Error {
 interface TreeEntry {
   path: string
   sha: string
+  /** 'file' from the Contents listing. */
   type: string
 }
 
@@ -116,19 +117,32 @@ export class GitHubStore implements VaultStore {
 
   async listShards(): Promise<Record<string, string>> {
     const out: Record<string, string> = {}
-    try {
-      const res = await this.call(
-        `/repos/${this.cfg.owner}/${this.cfg.repo}/git/trees/${this.cfg.branch}?recursive=1`,
-      )
-      const tree = (await res.json()) as { tree?: TreeEntry[]; truncated?: boolean }
-      for (const e of tree.tree ?? []) {
-        if (e.type !== 'blob') continue
+    // The Contents directory listing rather than the git tree: the tree
+    // endpoint sets `truncated` and silently drops entries once a repository is
+    // large enough, and a shard missing from the listing reads as "no remote
+    // copy", which is the one mistake this whole file exists to avoid.
+    //
+    // A directory listing carries no file contents, so the Contents API's 1 MB
+    // ceiling does not apply, and its own cap is 1,000 entries — one shard per
+    // month, so eighty years.
+    for (const dir of ['vault', 'vault/s']) {
+      let rows: TreeEntry[]
+      try {
+        const res = await this.call(
+          `/repos/${this.cfg.owner}/${this.cfg.repo}/contents/${dir}?ref=${encodeURIComponent(this.cfg.branch)}`,
+        )
+        rows = (await res.json()) as TreeEntry[]
+      } catch (e) {
+        // Neither directory exists in a fresh vault; that is a valid start.
+        if (e instanceof GitHubError && e.kind === 'not-found') continue
+        throw e
+      }
+      if (!Array.isArray(rows)) continue
+      for (const e of rows) {
+        if (e.type !== 'file') continue
         this.shas.set(e.path, e.sha)
         if (e.path.startsWith('vault/s/')) out[e.path] = e.sha
       }
-    } catch (e) {
-      // An empty repository has no tree yet; that is a valid starting state.
-      if (!(e instanceof GitHubError && e.kind === 'not-found')) throw e
     }
     return out
   }

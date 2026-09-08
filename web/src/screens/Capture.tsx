@@ -3,7 +3,7 @@ import { useStore } from '../app/store'
 import { WEEKDAYS } from '../app/i18n'
 import { Button, Field, Rule, Segmented, Sheet } from '../ui/primitives'
 import { Money } from '../ui/Money'
-import { DeleteBackward } from '../ui/icons'
+import { ChevronDown, ChevronUp, DeleteBackward } from '../ui/icons'
 import { available, coolingDays, commitWarning } from '../core/compute'
 import { addDays, weekdayOf } from '../core/date'
 import { parse } from '../core/money'
@@ -42,6 +42,7 @@ export default function Capture({ onClose }: { onClose(): void }) {
   const [day, setDay] = useState(today)
   const [datesOpen, setDatesOpen] = useState(false)
   const [keepOpen, setKeepOpen] = useState(false)
+  const [fieldsOpen, setFieldsOpen] = useState(false)
   const [override, setOverride] = useState(false)
 
   const amountFen = useMemo(
@@ -189,6 +190,12 @@ export default function Capture({ onClose }: { onClose(): void }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // The note is the promise to your future self, so the optional row opens
+  // itself the moment the cooling path appears.
+  useEffect(() => {
+    if (suspendable) setFieldsOpen(true)
+  }, [suspendable])
+
   // ── long presses ────────────────────────────────────────────────────
 
   const timerRef = useRef(0)
@@ -214,6 +221,10 @@ export default function Capture({ onClose }: { onClose(): void }) {
     { key: 'capture.dayBefore', day: addDays(today, -2) },
   ]
 
+  // Closed, the row still has to report what is behind it, or a note typed
+  // and then collapsed would look lost.
+  const filled = [note.trim(), merchant.trim()].filter(Boolean).join(' · ')
+
   const hint = amountFen === 0
     ? t('capture.needAmount')
     : !categoryId
@@ -233,7 +244,19 @@ export default function Capture({ onClose }: { onClose(): void }) {
             aria-label={`${t('capture.date')} ${day}`}
             onClick={() => setDatesOpen((v) => !v)}
           >
-            {day.slice(5)} · {weekday}
+            {day} · {weekday}
+          </button>
+          {/* 备注 and 商家 are optional, and as two open fields they pushed the
+              keypad off a 402×874 screen. Closed, they cost nothing: they join
+              the day and 继续记 in the one control strip above the figure. */}
+          <button
+            type="button"
+            className="capture__optional t-body"
+            aria-expanded={fieldsOpen}
+            onClick={() => setFieldsOpen((v) => !v)}
+          >
+            <span className="capture__optional-label">{filled || t('capture.optional')}</span>
+            {fieldsOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
           <button
             type="button"
@@ -263,9 +286,13 @@ export default function Capture({ onClose }: { onClose(): void }) {
             ))}
             <label className="capture__pick t-body">
               <span className="sr-only">{t('capture.pickDate')}</span>
+              {/* The native control is the picker, never the printed date: its
+                  locale format (08/09/2026) contradicts the ISO mono the rest
+                  of the app reads in. */}
+              <span className="capture__picked t-mono" aria-hidden="true">{day}</span>
               <input
                 type="date"
-                className="t-mono"
+                className="capture__pick-input"
                 value={day}
                 max={today}
                 onChange={(e) => {
@@ -273,6 +300,25 @@ export default function Capture({ onClose }: { onClose(): void }) {
                 }}
               />
             </label>
+          </div>
+        ) : null}
+
+        {fieldsOpen ? (
+          <div className="capture__fields">
+            <Field
+              label={t('capture.note')}
+              value={note}
+              onChange={setNote}
+              maxLength={40}
+              placeholder={suspendable ? t('capture.promise') : t('capture.note')}
+            />
+            <Field
+              label={t('capture.merchant')}
+              value={merchant}
+              onChange={setMerchant}
+              maxLength={40}
+              placeholder={t('capture.merchant')}
+            />
           </div>
         ) : null}
 
@@ -326,23 +372,6 @@ export default function Capture({ onClose }: { onClose(): void }) {
         </div>
 
         <Rule />
-
-        <div className="capture__fields">
-          <Field
-            label={t('capture.note')}
-            value={note}
-            onChange={setNote}
-            maxLength={40}
-            placeholder={suspendable ? t('capture.promise') : t('capture.note')}
-          />
-          <Field
-            label={t('capture.merchant')}
-            value={merchant}
-            onChange={setMerchant}
-            maxLength={40}
-            placeholder={t('capture.merchant')}
-          />
-        </div>
 
         <div className="capture__keypad" role="group" aria-label={t('capture.keypad')}>
           {KEYPAD.map((k) =>

@@ -7,10 +7,17 @@
      height of §5.8 and the caret cadence of §5.5. */
   --capture-key-h: calc(var(--s-8) + var(--s-4));
   --capture-caret: 1.06s;
+  /* The sheet is one screenful, never a scroll: amount, categories, stamp and
+     keypad have to be reachable without a swipe or the six-second entry is a
+     lie. Everything below trades air, never hit targets, to hold that. */
   display: flex;
   flex-direction: column;
-  gap: var(--s-4);
+  gap: var(--s-3);
 }
+
+/* A rule already separates; the flex gap on both sides of one would separate
+   twice. */
+.capture > .rule { margin-block: calc(var(--s-1) * -1); }
 
 /* ── head: the day, and whether the sheet stays open ─────────────────── */
 
@@ -20,6 +27,7 @@
   justify-content: space-between;
   gap: var(--s-3);
 }
+.capture__head > * { flex: 0 1 auto; min-width: 0; }
 
 .capture__date,
 .capture__keep {
@@ -53,7 +61,24 @@
   color: var(--c-ink900);
   box-shadow: inset 0 calc(var(--l-hairline) * -1) 0 0 var(--c-ink900);
 }
-.capture__pick input { color: var(--c-ink700); }
+.capture__pick {
+  position: relative;
+  color: var(--c-ink900);
+}
+/* The native input keeps the picker one tap away while printing nothing: the
+   ISO date beneath it is what is read. */
+.capture__pick-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+}
+.capture__picked {
+  text-underline-offset: 3px;
+  text-decoration: underline solid var(--c-rule-strong) var(--l-hairline);
+}
+.capture__pick:focus-within .capture__picked { text-decoration-color: var(--c-ink900); }
 
 /* ── the figure being keyed ──────────────────────────────────────────── */
 
@@ -62,7 +87,6 @@
   align-items: baseline;
   justify-content: flex-end;
   gap: var(--s-2);
-  padding-top: var(--s-2);
 }
 /* The one place an integer is not ink-900: an untouched amount is a
    placeholder, and a placeholder is not a figure yet (§5.5). */
@@ -120,6 +144,24 @@
 .capture__tier {
   padding-top: var(--s-2);
   color: var(--c-ink500);
+}
+
+.capture__optional {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: var(--l-hit-target);
+  padding-inline: var(--s-2);
+  color: var(--c-ink500);
+}
+.capture__optional[aria-expanded='true'] {
+  color: var(--c-ink900);
+  box-shadow: inset 0 calc(var(--l-hairline) * -1) 0 0 var(--c-ink900);
+}
+.capture__optional-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .capture__fields {
@@ -194,4 +236,30 @@
    its blink is a depiction. */
 @media (prefers-reduced-motion: reduce) {
   .capture__caret { animation: none; }
+}
+
+/* ── height tiers ────────────────────────────────────────────────────── */
+
+/* The sheet is 92dvh, so on a short screen the whole rhythm has to give way
+   before the keypad does. Air goes first, then the key height — never below
+   the 44 hit target (§5.8 asks for 56, which is what a tall screen gets). */
+@media (max-height: 840px) {
+  .capture {
+    --capture-key-h: calc(var(--s-8) + var(--s-3));
+    gap: var(--s-2);
+  }
+}
+
+/* 375×667 is the floor, and there it is the keypad or nothing: the last air
+   goes, and the rules alone carry the separation they were drawn for. */
+@media (max-height: 785px) {
+  .capture {
+    --capture-key-h: var(--l-hit-target);
+    gap: var(--s-0);
+    /* The sheet's 40 top padding assumes a title bar; this sheet opens on a
+       control strip, so most of it is bought back for the keypad. */
+    margin-top: calc(var(--s-6) * -1);
+  }
+  .capture > .rule { margin-block: var(--s-1); }
+  .capture__grid { gap: var(--s-0); }
 }

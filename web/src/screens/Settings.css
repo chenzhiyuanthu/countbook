@@ -22,10 +22,14 @@
   padding-bottom: var(--s-3);
 }
 
-/* A section's parts are separated by air, not by nested cards (§5.2). */
+/* A section's parts are separated by air, not by nested cards (§5.2). The
+   block owns its own gap outright rather than adding it to the stack margin,
+   which was stacking --s-6 on --s-4 and opening a section-sized hole inside a
+   section. */
 .settings__block { padding-top: var(--s-6); }
 .settings__stack > * + * { margin-top: var(--s-4); }
 .settings__section > * + * { margin-top: var(--s-4); }
+.settings__section > * + .settings__block { margin-top: var(--s-0); }
 
 .settings__hint { color: var(--c-ink700); }
 
@@ -46,21 +50,27 @@
   gap: var(--s-3);
 }
 
-/* The text link of DESIGN.md §5.6: ink-700 under a hairline rule, never a
-   filled box and never heavier than the figure it acts on. It still owns a full
-   hit target; the padding is pulled back out so the words stay on the grid. */
+/* The text link of DESIGN.md §5.6, never a filled box. Its rest tone is one
+   step below the §5.6 isolated link: on this screen every link sits beside the
+   figure it would overwrite, and an action that out-darkens its own value makes
+   the eye land on the button instead of the number. ink-500 is also exactly the
+   --rule-active value, so the label and its underline are one weight — the
+   underline, not the ink, is what says this word is pressable. It still owns a
+   full hit target; the padding is pulled back out so the words stay on the
+   grid. */
 .settings__link {
   display: inline-flex;
   align-items: center;
   min-height: var(--l-hit-target);
   padding-inline: var(--s-2);
   margin-inline: calc(var(--s-2) * -1);
-  color: var(--c-ink700);
+  color: var(--c-ink500);
   text-decoration: underline;
   text-decoration-thickness: var(--l-hairline);
   text-underline-offset: 2px;
 }
-.settings__link:hover { color: var(--c-ink900); }
+.settings__link:hover,
+.settings__link:focus-visible { color: var(--c-ink900); }
 .settings__link:disabled { color: var(--c-ink300); text-decoration: none; cursor: default; }
 
 .settings__external {
@@ -156,9 +166,12 @@
 /* The total closes the table, so it sits under the last rule rather than on it. */
 .settings__alloc { padding-top: var(--s-3); }
 
-/* A suggestion is an aside inside a row, so it takes the small size the ledger
-   uses for the same job; label tracking is for capitals, not for figures. */
+/* A suggestion is an aside beside a value, so it takes the small size the
+   ledger uses for the same job — and its 采用 takes the same size, because a
+   button set larger than the line it belongs to is the loudest thing on the
+   row. Label tracking is for capitals, not for figures. */
 .settings__figure,
+.settings__propose .settings__link,
 .settings__cat .settings__link {
   font-size: var(--t-label-size);
   letter-spacing: 0;

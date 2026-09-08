@@ -82,6 +82,7 @@ export const STRINGS = {
   'capture.holdOverride': ['仍要立即记入', 'Enter it now anyway'],
   'capture.overrideWarned': ['仍要立即记入 · {warning}', 'Enter it now anyway · {warning}'],
   'capture.suspended': ['已挂起', 'Held'],
+  'capture.optional': ['备注 · 商家', 'Note · Payee'],
 
   'ledger.title': ['账页', 'Ledger'],
   'ledger.month': ['{month}', '{month}'],

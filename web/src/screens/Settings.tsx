@@ -193,11 +193,11 @@ function StandardSection() {
         />
         {proposal ? (
           <div className="settings__propose">
-            <span className="t-label ink-300">{t('standard.propose', { amount: format(proposal.monthlyFen) })}</span>
+            <span className="t-label ink-500">{t('standard.propose', { amount: format(proposal.monthlyFen) })}</span>
             <LinkButton onClick={() => setMonthly(yuan(proposal.monthlyFen))}>{t('standard.accept')}</LinkButton>
           </div>
         ) : (
-          <p className="t-label ink-300">{t('standard.proposeGate', { n: gateDays })}</p>
+          <p className="t-label ink-500">{t('standard.proposeGate', { n: gateDays })}</p>
         )}
       </div>
 
@@ -229,7 +229,7 @@ function StandardSection() {
                 <span className="settings__cat-suggest">
                   {suggested !== undefined && suggested > 0 ? (
                     <>
-                      <span className="t-mono settings__figure ink-300">{format(suggested)}</span>
+                      <span className="t-mono settings__figure ink-500">{format(suggested)}</span>
                       <LinkButton
                         ariaLabel={`${name} · ${t('standard.suggest', { amount: format(suggested) })} · ${t('standard.accept')}`}
                         onClick={() => setPer((prev) => ({ ...prev, [c.id]: yuan(suggested) }))}

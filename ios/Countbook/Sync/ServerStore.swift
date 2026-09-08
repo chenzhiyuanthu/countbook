@@ -1,5 +1,14 @@
 import Foundation
 
+/// Sync must always see the server's present state, never a cached copy of it;
+/// see the note in GitHubStore.
+let uncachedSession: URLSession = {
+    let config = URLSessionConfiguration.ephemeral
+    config.urlCache = nil
+    config.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+    return URLSession(configuration: config)
+}()
+
 /// Adapter B — a self-hosted sync server.
 ///
 /// Unlike the GitHub vault this needs no compare-and-swap: the server is an

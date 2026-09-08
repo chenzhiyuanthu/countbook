@@ -630,17 +630,39 @@ struct RegretBlocksView: View {
 
     @Environment(\.displayScale) private var displayScale
 
-    private var cols: Int {
-        max(
-            ChartGeom.regretMinCols,
-            Int(((ChartGeom.plotW + ChartGeom.regretGap) / (ChartGeom.regretUnit + ChartGeom.regretGap)).rounded(.down))
-        )
+    private static let cols = max(
+        ChartGeom.regretMinCols,
+        Int(((ChartGeom.plotW + ChartGeom.regretGap) / (ChartGeom.regretUnit + ChartGeom.regretGap)).rounded(.down))
+    )
+
+    /// One square per judged entry, so the block is laid out once at
+    /// construction: a `body` that rebuilt it would walk the whole judged
+    /// history on every scroll tick.
+    private let cells: [RegretCell]
+    private let plotW: CGFloat
+    private let plotH: CGFloat
+    private let caption: String
+
+    init(judged: Int, notWorth: Int) {
+        self.judged = judged
+        self.notWorth = notWorth
+        let cols = Self.cols
+        let gated = judged < ChartGeom.regretMinSample
+        cells = gated ? [] : regretBlockLayout(judged, spreadMarks(judged, notWorth), cols)
+        let rows = gated ? 0 : Int((Double(judged) / Double(cols)).rounded(.up))
+        plotW = CGFloat(cols) * (ChartGeom.regretUnit + ChartGeom.regretGap) - ChartGeom.regretGap
+        plotH = CGFloat(rows) * (ChartGeom.regretUnit + ChartGeom.regretGap) - ChartGeom.regretGap
+        caption = gated ? "" : S.t(.chartRegretBlock, [
+            "judged": judged,
+            "notWorth": notWorth,
+            "rate": fixed1(Double(notWorth) / Double(judged) * 100) + "%",
+        ])
     }
 
     var body: some View {
         if judged < ChartGeom.regretMinSample {
             // The rate is withheld, and what is withholding it is stated instead.
-            let rows = (Double(ChartGeom.regretMinSample) / Double(cols)).rounded(.up)
+            let rows = (Double(ChartGeom.regretMinSample) / Double(Self.cols)).rounded(.up)
             ChartGate(
                 text: S.t(.chartRegretGate, ["n": ChartGeom.regretMinSample - judged]),
                 minHeight: CGFloat(rows) * (ChartGeom.regretUnit + ChartGeom.regretGap)
@@ -650,24 +672,14 @@ struct RegretBlocksView: View {
         }
     }
 
+    // 9 red squares in 40 need no legend, so the caption is the whole label and
+    // the squares carry nothing on their own.
     private var block: some View {
-        let cells = regretBlockLayout(judged, spreadMarks(judged, notWorth), cols)
-        let rows = Int((Double(judged) / Double(cols)).rounded(.up))
-        let w = CGFloat(cols) * (ChartGeom.regretUnit + ChartGeom.regretGap) - ChartGeom.regretGap
-        let h = CGFloat(rows) * (ChartGeom.regretUnit + ChartGeom.regretGap) - ChartGeom.regretGap
-        let caption = S.t(.chartRegretBlock, [
-            "judged": judged,
-            "notWorth": notWorth,
-            "rate": fixed1(Double(notWorth) / Double(judged) * 100) + "%",
-        ])
-
-        // 9 red squares in 40 need no legend, so the caption is the whole label
-        // and the squares carry nothing on their own.
-        return VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             Canvas(opaque: false) { ctx, size in
                 let scale = displayScale
                 // Unit squares must stay square, so this one form scales uniformly.
-                let k = size.width / w
+                let k = size.width / plotW
                 for c in cells {
                     let r = CGRect(
                         x: snap(CGFloat(c.col) * (ChartGeom.regretUnit + ChartGeom.regretGap) * k, scale),
@@ -682,7 +694,7 @@ struct RegretBlocksView: View {
                     }
                 }
             }
-            .aspectRatio(w / max(h, 1), contentMode: .fit)
+            .aspectRatio(plotW / max(plotH, 1), contentMode: .fit)
             Text(caption)
                 .font(TypeScale.body.font)
                 .foregroundStyle(Ink.ink700)
@@ -707,13 +719,21 @@ struct AnnualBarView: View {
 
     @Environment(\.displayScale) private var displayScale
 
+    private let merged: [AnnualBarRow]
+    private let segments: [AnnualSegment]
+    private let total: Fen
+
+    init(rows: [AnnualBarRow]) {
+        self.rows = rows
+        merged = Self.merge(rows)
+        segments = annualBarSegments(merged.map(\.annual))
+        total = merged.reduce(0) { $0 + $1.annual }
+    }
+
     var body: some View {
-        let merged = self.merged
         if merged.isEmpty {
             ChartGate(text: S.t(.chartEmpty))
         } else {
-            let segments = annualBarSegments(merged.map(\.annual))
-            let total = merged.reduce(0) { $0 + $1.annual }
             VStack(alignment: .leading, spacing: 0) {
                 Canvas(opaque: false) { ctx, size in
                     let scale = displayScale
@@ -736,6 +756,9 @@ struct AnnualBarView: View {
                     }
                 }
                 .frame(height: ChartGeom.annualHeight)
+                // A Canvas carries no accessibility content of its own, so the
+                // bar is made one element and given the total it draws.
+                .accessibilityElement()
                 .accessibilityLabel(S.t(.chartAnnual, ["amount": formatYuan(total)]))
 
                 VStack(alignment: .leading, spacing: Space.s1) {
@@ -754,7 +777,7 @@ struct AnnualBarView: View {
 
     /// A segment thinner than 3pt is a smudge, not a reading. They are summed
     /// into one 其他 rather than drawn as noise.
-    private var merged: [AnnualBarRow] {
+    private static func merge(_ rows: [AnnualBarRow]) -> [AnnualBarRow] {
         // Ranked by annual cost descending; ties keep their given order, as the
         // stable sort on the web does.
         let ranked = rows.enumerated()

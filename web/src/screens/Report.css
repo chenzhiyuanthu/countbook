@@ -80,8 +80,12 @@
 
 /* A withheld statistic is a sentence where the chart would have begun, not a
    chart-shaped hole: it takes the section's own rhythm and reserves nothing,
-   so the page still reads as a printed statement. */
-.report__gate {
+   so the page still reads as a printed statement. The charts that gate
+   themselves (后悔率) are held to the same line, so one withheld section on this
+   page does not sit lower than the next. */
+.report__gate,
+.report .chart__gate {
+  min-height: 0;
   padding-block: 0;
 }
 

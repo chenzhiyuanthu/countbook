@@ -53,9 +53,21 @@ actor GitHubStore: VaultStore {
     /// Blob SHAs from the last tree read, so a write knows what it is replacing.
     private var shas: [String: String] = [:]
 
-    init(_ cfg: GitHubConfig, session: URLSession = .shared) {
+    init(_ cfg: GitHubConfig, session: URLSession? = nil) {
         self.cfg = cfg
-        self.session = session
+        self.session = session ?? Self.uncachedSession()
+    }
+
+    /// GitHub answers with `Cache-Control: private, max-age=60`, and
+    /// `URLSession.shared` honours it — so a compare-and-swap retry would keep
+    /// being handed the same stale blob sha out of the local cache for a minute
+    /// and could never converge. Sync must always see the server's present
+    /// state, so this transport keeps no cache at all.
+    private static func uncachedSession() -> URLSession {
+        let config = URLSessionConfiguration.ephemeral
+        config.urlCache = nil
+        config.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        return URLSession(configuration: config)
     }
 
     nonisolated func describe() -> String { "\(cfg.owner)/\(cfg.repo)" }
@@ -72,6 +84,7 @@ actor GitHubStore: VaultStore {
             throw GitHubError("bad request path: \(path)", 0, .other)
         }
         var req = URLRequest(url: url)
+        req.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         req.httpMethod = method
         req.httpBody = body
         req.setValue(accept, forHTTPHeaderField: "accept")
@@ -98,7 +111,9 @@ actor GitHubStore: VaultStore {
             )
         }
         if http.statusCode == 404 { throw GitHubError("not found: \(path)", 404, .notFound) }
-        if http.statusCode == 409 || http.statusCode == 422 { throw ConflictError() }
+        if http.statusCode == 409 || http.statusCode == 422 {
+            throw ConflictError(detail: "\(http.statusCode) \(path): \(String(decoding: data.prefix(300), as: UTF8.self))")
+        }
         let text = String(decoding: data.prefix(200), as: UTF8.self)
         throw GitHubError("GitHub \(http.statusCode): \(text)", http.statusCode, .other)
     }
@@ -153,19 +168,29 @@ actor GitHubStore: VaultStore {
     }
 
     func listShards() async throws -> [String: String] {
-        struct Tree: Decodable {
-            struct Entry: Decodable { let path: String; let sha: String; let type: String }
-            let tree: [Entry]?
-        }
+        struct Entry: Decodable { let path: String; let sha: String; let type: String }
+
         var out: [String: String] = [:]
-        do {
-            let data = try await call("\(repoRoot)/git/trees/\(escaped(cfg.branch))?recursive=1")
-            for e in try JSONDecoder().decode(Tree.self, from: data).tree ?? [] where e.type == "blob" {
-                shas[e.path] = e.sha
-                if e.path.hasPrefix("vault/s/") { out[e.path] = e.sha }
+        // The Contents directory listing rather than the git tree: the tree
+        // endpoint sets `truncated` and silently drops entries once a
+        // repository is large enough, and a shard missing from the listing
+        // reads as "no remote copy", which is the one mistake this whole file
+        // exists to avoid.
+        //
+        // A directory listing carries no file contents, so the Contents API's
+        // 1 MB ceiling does not apply, and its own cap is 1,000 entries — one
+        // shard per month, so eighty years.
+        for dir in ["vault", "vault/s"] {
+            do {
+                let data = try await call("\(repoRoot)/contents/\(dir)?ref=\(escaped(cfg.branch))")
+                for e in try JSONDecoder().decode([Entry].self, from: data) where e.type == "file" {
+                    shas[e.path] = e.sha
+                    if e.path.hasPrefix("vault/s/") { out[e.path] = e.sha }
+                }
+            } catch let e as GitHubError where e.kind == .notFound {
+                // Neither directory exists in a fresh vault; that is a valid start.
+                continue
             }
-        } catch let e as GitHubError where e.kind == .notFound {
-            // An empty repository has no tree yet; that is a valid starting state.
         }
         return out
     }

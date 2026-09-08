@@ -253,25 +253,23 @@ export default function Wants({ onCapture }: { onCapture(): void }) {
                     ? t('wants.cooling', { days: left.days, time: left.time })
                     : t('wants.coolingHours', { time: left.time })
                 return (
-                  <li key={w.id} className="row wants__row wants__cooling">
+                  <li key={w.id} className="wants__row wants__cooling">
                     <span className="wants__arc" aria-hidden="true">
                       <Ring fraction={(w.unlockAt - nowMs) / total} size={32} tone="held" />
                     </span>
-                    <span className="row__grow wants__cooling-body">
-                      <span className="row__truncate t-body ink-700 wants__name">{w.name}</span>
-                      <span className="t-mono fig-held wants__countdown">{countdown}</span>
-                      <button
-                        type="button"
-                        className="t-body wants__link"
-                        onClick={() => remove(w)}
-                        aria-label={`${t('wants.remove')} · ${w.name}`}
-                      >
-                        {t('wants.remove')}
-                      </button>
-                    </span>
+                    <span className="row__truncate t-body ink-700 wants__name">{w.name}</span>
                     <span className="wants__amount">
                       <Money fen={w.price} size="row" tone="held" currency={currency} />
                     </span>
+                    <span className="t-mono fig-held wants__countdown">{countdown}</span>
+                    <button
+                      type="button"
+                      className="t-body wants__link wants__cooling-action"
+                      onClick={() => remove(w)}
+                      aria-label={`${t('wants.remove')} · ${w.name}`}
+                    >
+                      {t('wants.remove')}
+                    </button>
                   </li>
                 )
               })}

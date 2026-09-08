@@ -586,7 +586,9 @@ export function ProgressRule({
 // ── Ring ──────────────────────────────────────────────────────────────
 
 /** The depleting cooling arc. `fraction` is what remains. It carries no timer:
-    the caller repaints it once a minute, which is the whole cadence (§5.10). */
+    the caller repaints it once a minute, which is the whole cadence (§5.10).
+    The hairline track underneath is what keeps a nearly-elapsed arc legible as
+    a measure: on its own, two remaining pixels read as a rendering fault. */
 export function Ring({
   fraction, size = 18, tone = 'held', label,
 }: {
@@ -610,6 +612,7 @@ export function Ring({
       focusable="false"
       shapeRendering="geometricPrecision"
     >
+      <circle className="pr-ring__track" cx={size / 2} cy={size / 2} r={r} />
       <circle
         className="pr-ring__arc"
         cx={size / 2}

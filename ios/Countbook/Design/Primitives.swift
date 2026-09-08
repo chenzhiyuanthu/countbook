@@ -3,122 +3,87 @@ import SwiftUI
 /// The shared parts every screen is printed from — the SwiftUI counterparts of
 /// `web/src/ui/primitives.tsx`. Nothing here decides what a screen says; it
 /// decides only how a card, a rule, a row, a button, a field and a sheet are
-/// set. Colour, spacing, radius and duration come from `Tokens.swift`.
+/// set. Colour, spacing, radius and duration come from `Tokens.swift`; the type
+/// roles, the hairline, the card surface and the sheet's one shadow come from
+/// `Theme.swift`, so a primitive and a screen cannot print the same thing two
+/// different ways.
 ///
 /// One deliberate omission: no primitive composes a money figure. DESIGN §3.6
-/// gives that job to `MoneyText` and to nothing else, so every slot that shows
+/// gives that job to `MoneyView` and to nothing else, so every slot that shows
 /// an amount here is a `@ViewBuilder` the caller fills.
 
-// ── metrics the token file does not emit ─────────────────────────────
+// MARK: - Metrics neither the token file nor Theme emits
 
-/// Two DESIGN.md constants `design/tokens.json` has no field for, expressed as
-/// sums of tokens rather than as literals so they move if the scale moves.
-enum ListMetrics {
-    /// §4.1 `--gutter-amount`. The amount column is a column: the same width on
-    /// every list in the app, never flexing, never truncating. 96 = 64 + 32.
-    static let amountColumn: CGFloat = Space.s10 + Space.s7
-    /// §5.6. The bar height for every full-width button. 52 = 40 + 12.
-    static let barHeight: CGFloat = Space.s8 + Space.s3
-    /// §5.9. Sheet width is min(100%, 480). 480 = 720 × 2/3.
-    static let sheetWidth: CGFloat = Layout.contentMax / 3 * 2
-    /// §4.6 `--breakout`. The 破版 overhang past both edges of the column.
-    static let breakout: CGFloat = Space.s5
+private enum SheetMetrics {
+    /// §5.9 — the sheet is min(100%, 480) wide. 480 = 720 × ⅔.
+    static let maxWidth: CGFloat = Layout.contentMax / 3 * 2
+    /// §5.9 — dismissed past 88 of travel. 88 = 64 + 24.
+    static let dismissTravel: CGFloat = Space.s10 + Space.s6
+    /// §5.9 — …or past 600pt/s, which is a speed and so has no spacing step.
+    static let dismissVelocity: CGFloat = 600
 }
 
-/// §8.2. The icon stroke, the one geometry constant in the icon spec that is
-/// not a spacing step. Icons are drawn on a 24 grid with a 20 live area.
+/// §8.2. The icon stroke and the live area: icons are drawn on a 24 grid with a
+/// 20 live area, at stroke 1.5 with butt caps and mitre joins. The stroke is the
+/// one number in the icon spec that is not a spacing step.
 private let iconStroke: CGFloat = 1.5
 
-/// The five ink roles a mark may take. Selection, sign and state are never
-/// carried by colour (§2.1 R4, R5); this exists so the three chromatic roles
-/// are named once and cannot be spelled by hand at a call site.
-enum FigureTone: Sendable {
-    case neutral, over, held, spared, regret
+/// §5.6 — the pressed primary bar composites its ground to 0.86 rather than
+/// taking a second ink token, exactly as the web bar does.
+private let pressedOpacity: Double = 0.86
 
-    var color: Color {
-        switch self {
-        case .neutral: return Ink.ink700
-        case .over: return Ink.figOver
-        case .held: return Ink.figHeld
-        case .spared: return Ink.figSpared
-        case .regret: return Ink.figRegret
-        }
-    }
-}
+/// §5.6 — the hold ring's unfilled track is the label colour at 0.4. It is the
+/// only place in the product a colour is used at partial opacity.
+private let ringTrackOpacity: Double = 0.4
 
-// ── type ─────────────────────────────────────────────────────────────
+// MARK: - Type
 
-/// §3.4. The ratios in the scale are fixed; the base scales with Dynamic Type,
-/// capped per token so the layout survives `.accessibility5`. One ScaledMetric
-/// against `.body` drives every token, which is what keeps the ratios fixed —
-/// per-token text styles would drift apart from each other at large sizes.
-private struct TypeStyle: ViewModifier {
-    let base: CGFloat
+/// §5.6 and §5.7 set a few labels at a weight their type role does not carry: a
+/// commit bar at 600, a flat action at 500, a chosen stamp at 600, the 冲 glyph
+/// heavier than 必 and 想. Size, tracking, leading and the Dynamic Type cap all
+/// still come from the role — the only thing restated here is the weight, which
+/// is why this exists instead of a second scale.
+private struct WeightedRole: ViewModifier {
+    let role: TextRole
     let weight: Font.Weight
-    let tracking: CGFloat
-    let leading: CGFloat
-    let cap: CGFloat
-    let mono: Bool
+    let ink: Color
+    var mono: Bool = false
 
-    @ScaledMetric(relativeTo: .body) private var ratio: CGFloat = 100
+    @Environment(\.dynamicTypeSize) private var dynamicType
 
     func body(content: Content) -> some View {
-        let size = min(base * ratio / 100, cap)
+        let metrics = role.metrics
+        let size = role.size(at: dynamicType)
         return content
             .font(.system(size: size, weight: weight, design: mono ? .monospaced : .default)
                 .monospacedDigit())
-            .kerning(tracking * size)
-            .lineSpacing(max(0, size * (leading - 1.2)))
+            .kerning(metrics.tracking * size)
+            .lineSpacing(max(0, size * (metrics.leading - 1.2)))
+            .textCase(role == .label && S.locale == .en ? .uppercase : nil)
+            .foregroundStyle(ink)
     }
 }
 
 private extension View {
-    func typeStyle(
-        _ metrics: TypeScale.Metrics,
-        weight: Font.Weight,
-        cap: CGFloat,
-        mono: Bool = false
-    ) -> some View {
-        modifier(TypeStyle(
-            base: metrics.size, weight: weight, tracking: metrics.tracking,
-            leading: metrics.leading, cap: cap, mono: mono
-        ))
+    func typeRole(_ role: TextRole, weight: Font.Weight, ink: Color, mono: Bool = false) -> some View {
+        modifier(WeightedRole(role: role, weight: weight, ink: ink, mono: mono))
     }
 }
 
-/// §3.4's caps, as rendered points.
-private enum Cap {
-    static let row: CGFloat = 28
-    static let body: CGFloat = 26
-    static let label: CGFloat = 18
-    static let micro: CGFloat = 16
-    static let mono: CGFloat = 20
-}
+// MARK: - Motion
 
-// ── hairlines ────────────────────────────────────────────────────────
-
-/// One device pixel, not one point. `UIScreen.main.scale` is wrong on an
-/// external display and deprecated under multiple scenes, so the scale comes
-/// from the environment. Increased contrast restores a full point (§2.8).
-private struct HairlineWidth: DynamicProperty {
-    @Environment(\.displayScale) private var scale
-    @Environment(\.colorSchemeContrast) private var contrast
-
-    var value: CGFloat { contrast == .increased ? Layout.hairline : Layout.hairline / max(scale, 1) }
-}
-
-// ── motion ───────────────────────────────────────────────────────────
-
-/// Reduced motion removes depictions, never mechanics: a hold still takes as
-/// long, a cooling arc still updates. Only the tween goes (§6.6).
+/// Reduced motion removes depictions, never mechanics (§6.6): a hold still takes
+/// as long, a cooling arc still updates. Only the tween goes — a movement
+/// collapses to the shortest fade the token file emits, and a rule that only
+/// slides is given no animation at all.
 private func eased(_ duration: Double, reduced: Bool) -> Animation? {
-    reduced ? nil : Motion.ease(duration)
+    reduced ? .linear(duration: Motion.rowFade) : Motion.ease(duration)
 }
 
-// ── Card ─────────────────────────────────────────────────────────────
+// MARK: - Card
 
-/// §5.2. Surface, a hairline border, the card radius, and no shadow ever. A
-/// card must not contain another card.
+/// §5.2. Surface, a hairline border, the card radius, and no shadow ever. A card
+/// must not contain another card.
 struct Card<Content: View>: View {
     var compact: Bool = false
     var sunken: Bool = false
@@ -127,7 +92,7 @@ struct Card<Content: View>: View {
     var active: Bool = false
     @ViewBuilder var content: Content
 
-    private var hairline = HairlineWidth()
+    @Environment(\.displayScale) private var displayScale
 
     init(
         compact: Bool = false,
@@ -143,22 +108,20 @@ struct Card<Content: View>: View {
 
     var body: some View {
         content
-            .padding(compact ? Space.s4 : Space.s5)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(sunken ? Ink.surfaceSunken : Ink.surface)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .cardSurface(compact: compact, sunken: sunken)
             .overlay {
-                if !sunken {
+                if active {
+                    // ink500 is the value --rule-active carries; the generated
+                    // token file does not emit that role under its own name.
                     RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                        // ink-500 is the value --rule-active carries; the token
-                        // file does not emit that role under its own name.
-                        .strokeBorder(active ? Ink.ink500 : Ink.rule, lineWidth: hairline.value)
+                        .strokeBorder(Ink.ink500, lineWidth: Layout.hairline / max(displayScale, 1))
                 }
             }
     }
 }
 
-// ── RuleView ─────────────────────────────────────────────────────────
+// MARK: - RuleView
 
 /// §2.3 and §4.6. `strong` is a structural divider; `broken` is 破版 — an
 /// overspend lets the rule run past both edges of the content column. It is a
@@ -167,26 +130,23 @@ struct RuleView: View {
     var strong: Bool = false
     var broken: Bool = false
 
-    private var hairline = HairlineWidth()
-
     init(strong: Bool = false, broken: Bool = false) {
         self.strong = strong
         self.broken = broken
     }
 
     var body: some View {
-        Rectangle()
-            .fill(strong ? Ink.ruleStrong : Ink.rule)
-            .frame(height: hairline.value)
-            .padding(.horizontal, broken ? -ListMetrics.breakout : 0)
-            .accessibilityHidden(true)
+        Hairline(strong ? .strong : .regular)
+            // The overhang is real above the content column and clipped by the
+            // safe area below it, which is the intended accident.
+            .padding(.horizontal, broken ? -Layout.gutter : 0)
     }
 }
 
-// ── SectionHeader ────────────────────────────────────────────────────
+// MARK: - SectionHeader
 
-/// §5.3. A label, an optional text action on the same baseline, 12 of air, and
-/// the rule that opens the section.
+/// §5.3 and §3.5. A label, at most one text action on the same baseline, 12 of
+/// air, and the structural rule that opens the section.
 struct SectionHeader<Trailing: View>: View {
     let title: String
     @ViewBuilder var trailing: Trailing
@@ -199,9 +159,7 @@ struct SectionHeader<Trailing: View>: View {
     var body: some View {
         VStack(spacing: Space.s3) {
             HStack(alignment: .firstTextBaseline, spacing: Space.s3) {
-                Text(title)
-                    .typeStyle(TypeScale.labelCJK, weight: .semibold, cap: Cap.label)
-                    .foregroundStyle(Ink.ink500)
+                Text(title).textStyle(.label)
                 Spacer(minLength: 0)
                 trailing
             }
@@ -217,13 +175,13 @@ extension SectionHeader where Trailing == EmptyView {
     init(_ title: String) { self.init(title) { EmptyView() } }
 }
 
-// ── buttons ──────────────────────────────────────────────────────────
+// MARK: - Buttons
 
-/// A press is a change of ground, over `rowFade`, linear. No scale, no ripple.
-/// The token file emits no 90ms step, so the nearest one is used.
+/// A press is a change of ground or of composite, over `rowFade`, linear. No
+/// scale, no ripple, no haptic — the keypad owns the only haptic in the app.
 private struct BarPressStyle: ButtonStyle {
-    let pressedGround: Color?
-    let pressedOpacity: Double
+    var pressedGround: Color? = nil
+    var pressedOpacity: Double = 1
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -234,13 +192,14 @@ private struct BarPressStyle: ButtonStyle {
     }
 }
 
-/// §5.6, the primary bar. Ink ground, paper label, 52 high.
+/// §5.6, the primary bar: ink ground, paper label, 52 high, card radius.
 ///
-/// `holdMs` turns it into the commit hold: an unfilled ring that fills strictly
-/// linearly and fires only on completion. An eased timer lies about how much
-/// time is left, so the fill has no curve, and a release before the end drops
-/// the arc to zero with no rewind — nothing is saved. Under reduced motion the
-/// wait is unchanged and only its depiction becomes a countdown (§5.6, §9.7).
+/// `holdMs` turns it into the commit hold — pass `Rules.holdToSaveMs`. The ring
+/// is an unfilled 1pt circle that fills strictly linearly and fires only on
+/// completion: an eased timer lies about how much time is left. A release, or a
+/// finger that slides off the bar, drops the arc to zero with no rewind and
+/// nothing is saved. Under reduced motion the wait is unchanged and only its
+/// depiction changes to a countdown, because the delay is the mechanic (§9.7).
 struct PrimaryButton: View {
     let title: String
     var holdMs: Int? = nil
@@ -254,6 +213,10 @@ struct PrimaryButton: View {
     @State private var secondsLeft: Int = 0
     @State private var holding = false
     @State private var hold: Task<Void, Never>?
+    /// A hold that has completed must not restart under a finger that has not
+    /// lifted yet, so the press is tracked apart from the timer.
+    @State private var pressing = false
+    @State private var barSize: CGSize = .zero
 
     init(
         _ title: String,
@@ -271,22 +234,26 @@ struct PrimaryButton: View {
 
     private var held: Bool { (holdMs ?? 0) > 0 }
     private var ground: Color { disabled ? Ink.surfaceSunken : Ink.accentInk }
-    private var label: Color { disabled ? Ink.ink300 : Ink.accentOn }
+    private var labelInk: Color { disabled ? Ink.ink300 : Ink.accentOn }
 
     var body: some View {
         if held {
             bar
+                .opacity(holding ? pressedOpacity : 1)
                 .contentShape(Rectangle())
-                .gesture(holdGesture)
+                .gesture(holdGesture, including: disabled ? .subviews : .all)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(accessibilityLabel ?? title)
+                // VoiceOver cannot hold a finger down; activating the element
+                // starts the same timer and commits when it elapses, so the
+                // delay is kept rather than waived.
                 .accessibilityValue(holding ? String(secondsLeft) : "")
                 .accessibilityAddTraits(disabled ? [] : .isButton)
                 .accessibilityAction { begin() }
-                .onDisappear(perform: cancel)
+                .onDisappear(perform: stop)
         } else {
             Button(action: action) { bar }
-                .buttonStyle(BarPressStyle(pressedGround: nil, pressedOpacity: 0.86))
+                .buttonStyle(BarPressStyle(pressedOpacity: pressedOpacity))
                 .disabled(disabled)
                 .accessibilityLabel(accessibilityLabel ?? title)
         }
@@ -294,16 +261,24 @@ struct PrimaryButton: View {
 
     private var bar: some View {
         Text(title)
-            .typeStyle(TypeScale.body, weight: .semibold, cap: Cap.body)
-            .foregroundStyle(label)
+            .typeRole(.body, weight: .semibold, ink: labelInk)
             .multilineTextAlignment(.center)
+            .padding(.leading, Space.s4)
             // Room at the right end for the ring, which is centred 16 in.
-            .padding(.horizontal, held ? Space.s4 * 2 + Space.s6 : Space.s4)
-            .frame(maxWidth: .infinity, minHeight: ListMetrics.barHeight)
+            .padding(.trailing, held ? Space.s4 * 2 + Space.s6 : Space.s4)
+            .frame(maxWidth: .infinity, minHeight: Theme.barHeight)
             .background(ground)
             .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .overlay(alignment: .trailing) { ring }
-            .opacity(holding ? 0.86 : 1)
+            .background {
+                // The gesture has to know when the finger has left the bar, and
+                // only the layout knows how wide the bar came out.
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear { barSize = geo.size }
+                        .onChange(of: geo.size) { _, size in barSize = size }
+                }
+            }
     }
 
     @ViewBuilder
@@ -312,15 +287,16 @@ struct PrimaryButton: View {
             Group {
                 if reduceMotion {
                     Text(holding ? String(secondsLeft) : "")
-                        .typeStyle(TypeScale.label, weight: .regular, cap: Cap.mono, mono: true)
-                        .foregroundStyle(label)
+                        .typeRole(.mono, weight: .regular, ink: labelInk, mono: true)
                         .frame(width: Space.s6, height: Space.s6)
                 } else {
                     ZStack {
-                        Circle().strokeBorder(label.opacity(0.4), lineWidth: Layout.hairline)
+                        Circle()
+                            .strokeBorder(labelInk.opacity(ringTrackOpacity), lineWidth: Layout.hairline)
                         Circle()
                             .trim(from: 0, to: progress)
-                            .stroke(label, style: StrokeStyle(lineWidth: Layout.hairline, lineCap: .butt))
+                            .stroke(labelInk, style: StrokeStyle(lineWidth: Layout.hairline, lineCap: .butt))
+                            // Twelve o'clock start, filling clockwise.
                             .rotationEffect(.degrees(-90))
                             .padding(Layout.hairline / 2)
                     }
@@ -332,24 +308,23 @@ struct PrimaryButton: View {
         }
     }
 
-    /// A zero-distance drag rather than a long press: the gesture must report
-    /// the finger leaving the bar, which `LongPressGesture` does not.
+    /// A zero-distance drag rather than a `LongPressGesture`: the gesture must
+    /// report the finger sliding off the bar, which a long press does not.
     private var holdGesture: some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
-                if !holding {
+                if !pressing {
+                    pressing = true
                     begin()
-                } else if !bounds.contains(value.location) {
-                    cancel()
+                } else if hold != nil, barSize != .zero,
+                          !CGRect(origin: .zero, size: barSize).contains(value.location) {
+                    stop()
                 }
             }
-            .onEnded { _ in cancel() }
-    }
-
-    /// The bar's own rectangle, in its local space; the drag reports locations
-    /// outside it once the finger has moved away.
-    private var bounds: CGRect {
-        CGRect(x: 0, y: 0, width: .greatestFiniteMagnitude, height: ListMetrics.barHeight)
+            .onEnded { _ in
+                pressing = false
+                stop()
+            }
     }
 
     private func begin() {
@@ -364,7 +339,9 @@ struct PrimaryButton: View {
             while !Task.isCancelled {
                 let left = end.timeIntervalSinceNow
                 if left <= 0 { break }
-                secondsLeft = max(1, Int(left.rounded(.up)))
+                secondsLeft = Swift.max(1, Int(left.rounded(.up)))
+                // The countdown is a second hand, so it is repainted ten times a
+                // second and not once a frame.
                 try? await Task.sleep(for: .milliseconds(100))
             }
             guard !Task.isCancelled else { return }
@@ -374,7 +351,7 @@ struct PrimaryButton: View {
         }
     }
 
-    private func cancel() {
+    private func stop() {
         guard hold != nil || holding else { return }
         hold?.cancel()
         hold = nil
@@ -388,7 +365,8 @@ struct PrimaryButton: View {
     }
 }
 
-/// §5.6, the flat action. No ground, no border; the word carries it.
+/// §5.6, the flat action (值 / 不值 / 记入账页 / 不买了). No ground, no border;
+/// the word carries it, and a press is a change of ground only.
 struct QuietButton: View {
     let title: String
     var fullWidth: Bool = false
@@ -413,24 +391,23 @@ struct QuietButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .typeStyle(TypeScale.body, weight: .medium, cap: Cap.body)
-                .foregroundStyle(disabled ? Ink.ink300 : Ink.ink900)
+                .typeRole(.body, weight: .medium, ink: disabled ? Ink.ink300 : Ink.ink900)
                 .padding(.horizontal, Space.s4)
                 .frame(
                     maxWidth: fullWidth ? .infinity : nil,
-                    minHeight: fullWidth ? ListMetrics.barHeight : Layout.hitTarget
+                    minHeight: fullWidth ? Theme.barHeight : Layout.hitTarget
                 )
                 .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
-        .buttonStyle(BarPressStyle(pressedGround: Ink.surfaceSunken, pressedOpacity: 1))
+        .buttonStyle(BarPressStyle(pressedGround: Ink.surfaceSunken))
         .disabled(disabled)
         .accessibilityLabel(accessibilityLabel ?? title)
     }
 }
 
-/// §5.6 and §2.5. Destructive is never red — red is rationed to three uses and
-/// a delete is not one of them. The weight of the border and the label is the
-/// whole difference.
+/// §5.6 and §2.5. Destructive is never red — red is rationed to three uses and a
+/// delete is not one of them. A rule and a heavier label are the whole
+/// difference between this and a flat action.
 struct DangerButton: View {
     let title: String
     var fullWidth: Bool = true
@@ -438,7 +415,7 @@ struct DangerButton: View {
     var accessibilityLabel: String? = nil
     let action: () -> Void
 
-    private var hairline = HairlineWidth()
+    @Environment(\.displayScale) private var displayScale
 
     init(
         _ title: String,
@@ -457,51 +434,56 @@ struct DangerButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .typeStyle(TypeScale.body, weight: .semibold, cap: Cap.body)
-                .foregroundStyle(disabled ? Ink.ink300 : Ink.ink900)
+                .typeRole(.body, weight: .semibold, ink: disabled ? Ink.ink300 : Ink.ink900)
                 .padding(.horizontal, Space.s4)
                 .frame(
                     maxWidth: fullWidth ? .infinity : nil,
-                    minHeight: fullWidth ? ListMetrics.barHeight : Layout.hitTarget
+                    minHeight: fullWidth ? Theme.barHeight : Layout.hitTarget
                 )
                 .background(Ink.surface)
                 .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                        .strokeBorder(disabled ? Ink.rule : Ink.ink500, lineWidth: hairline.value)
+                        .strokeBorder(disabled ? Ink.rule : Ink.ink500,
+                                      lineWidth: Layout.hairline / max(displayScale, 1))
                 }
         }
-        .buttonStyle(BarPressStyle(pressedGround: Ink.surfaceSunken, pressedOpacity: 1))
+        .buttonStyle(BarPressStyle(pressedGround: Ink.surfaceSunken))
         .disabled(disabled)
         .accessibilityLabel(accessibilityLabel ?? title)
     }
 }
 
-// ── SegmentedStamp ───────────────────────────────────────────────────
+// MARK: - SegmentedStamp
 
-/// §5.7, the 记账印章. Selection is a 2pt rule sliding under the chosen word:
-/// no fill, no colour, no capsule (§2.1 R5). It has no default selection, and
-/// `nil` is a real state the container can hold — the commit bar stays disabled
-/// until a stamp is chosen, which is the whole point of the control.
+/// §5.7, the 记账印章. Selection is a 2pt rule sliding under the chosen word over
+/// `stampSlide`: no fill, no colour, no capsule (§2.1 R5). The rule is exactly
+/// as wide as the label it belongs to, which is why it is an overlay on the word
+/// rather than a bar in the container.
 ///
-/// `onChange` fires on a repeat choice too, so a screen can read a second tap
-/// on 想要 as an escalation to 冲动.
+/// There is no default selection, and `nil` is a real state the control can
+/// hold: the commit bar stays disabled until a stamp is chosen, which is the
+/// whole point of it. `onChange` fires on a repeat choice too, so a screen can
+/// read a second tap on 想要 as an escalation to 冲动.
 struct SegmentedStamp<Value: Hashable>: View {
     struct Option: Identifiable {
         let value: Value
         let label: String
-        /// Ink weight per §2.6: 必要 → 想要 → 冲动 is a value ramp, not a hue ramp.
         var id: Value { value }
+
+        init(value: Value, label: String) {
+            self.value = value
+            self.label = label
+        }
     }
 
     let options: [Option]
     let selection: Value?
-    let onChange: (Value) -> Void
     var accessibilityLabel: String? = nil
+    let onChange: (Value) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Namespace private var stamp
-    private var hairline = HairlineWidth()
 
     init(
         options: [Option],
@@ -522,9 +504,7 @@ struct SegmentedStamp<Value: Hashable>: View {
             }
         }
         // Behind the segments, so the 2pt selection rule prints over it.
-        .background(alignment: .bottom) {
-            Rectangle().fill(Ink.rule).frame(height: hairline.value)
-        }
+        .background(alignment: .bottom) { Hairline() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilityLabel ?? "")
     }
@@ -532,13 +512,15 @@ struct SegmentedStamp<Value: Hashable>: View {
     private func segment(_ option: Option) -> some View {
         let chosen = option.value == selection
         return Button {
-            withAnimation(eased(Motion.stampSlide, reduced: reduceMotion)) { onChange(option.value) }
+            // The selection is a slide and nothing else, so under reduced motion
+            // it simply arrives: there is no fade to collapse it into.
+            withAnimation(reduceMotion ? nil : Motion.ease(Motion.stampSlide)) {
+                onChange(option.value)
+            }
         } label: {
             Text(option.label)
-                .typeStyle(TypeScale.body, weight: chosen ? .semibold : .medium, cap: Cap.body)
-                .foregroundStyle(chosen ? Ink.ink900 : Ink.ink500)
-                // The frame keeps the width of the word, so the rule beneath is
-                // exactly as wide as the label it belongs to.
+                .typeRole(.body, weight: chosen ? .semibold : .medium,
+                          ink: chosen ? Ink.ink900 : Ink.ink500)
                 .frame(minHeight: Layout.hitTarget)
                 .overlay(alignment: .bottom) {
                     if chosen {
@@ -548,7 +530,8 @@ struct SegmentedStamp<Value: Hashable>: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                // The hit area is the whole third, radius pill and invisible.
+                // The hit area is the whole third; the pill radius is invisible
+                // and exists only so a press has a sane shape (§5.7).
                 .contentShape(RoundedRectangle(cornerRadius: Radius.pill, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -557,30 +540,28 @@ struct SegmentedStamp<Value: Hashable>: View {
     }
 }
 
-// ── SheetContainer ───────────────────────────────────────────────────
+// MARK: - SheetContainer
 
 /// §5.9. The scrim, the one shadow, the sheet radius on the top corners only,
-/// and the safe-area inset as padding rather than margin so the last row of a
-/// keypad sits flush to it.
+/// and the safe-area inset as padding rather than margin so a keypad's last row
+/// sits flush to it.
 ///
-/// It draws its own scrim, so present it as an overlay in a `ZStack`. Inside a
+/// It draws its own scrim, so present it as an overlay in a `ZStack`; inside a
 /// `.sheet`, add `.presentationBackground(.clear)` so this geometry is the one
-/// that shows. There is no blur anywhere: no `Material`, no `backdrop-filter`
-/// — that is the constraint that keeps both renderers identical (§2.7).
+/// that shows. There is no blur anywhere — no `Material`, no `backdrop-filter` —
+/// and that is the constraint that keeps both renderers identical (§2.7).
 struct SheetContainer<Content: View>: View {
     var title: String? = nil
     var accessibilityLabel: String? = nil
     let onClose: () -> Void
     @ViewBuilder var content: Content
 
-    @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    @State private var shown = false
+    @State private var veiled = false
+    @State private var presented = false
     @State private var drag: CGFloat = 0
     @State private var leaving = false
-
-    private var hairline = HairlineWidth()
 
     init(
         title: String? = nil,
@@ -598,7 +579,7 @@ struct SheetContainer<Content: View>: View {
         GeometryReader { geo in
             ZStack(alignment: .bottom) {
                 Ink.scrim
-                    .opacity(shown ? 1 : 0)
+                    .opacity(veiled ? 1 : 0)
                     .contentShape(Rectangle())
                     .onTapGesture(perform: requestClose)
                     .accessibilityHidden(true)
@@ -609,9 +590,12 @@ struct SheetContainer<Content: View>: View {
         }
         .ignoresSafeArea()
         .accessibilityAddTraits(.isModal)
+        .accessibilityLabel(accessibilityLabel ?? title ?? "")
         .onAppear {
-            // Linear for the veil, eased for the sheet (§6.3).
-            withAnimation(.linear(duration: Motion.scrimFade)) { shown = true }
+            // A veil is not eased and a sheet is: linear for the scrim, the one
+            // curve for the sheet (§6.3).
+            withAnimation(.linear(duration: Motion.scrimFade)) { veiled = true }
+            withAnimation(eased(Motion.sheetPresent, reduced: reduceMotion)) { presented = true }
         }
     }
 
@@ -622,8 +606,9 @@ struct SheetContainer<Content: View>: View {
         }
         .padding(.top, Space.s8)
         .padding(.horizontal, Layout.gutter)
+        // The inset is padding, not margin: the sheet's ground runs under it.
         .padding(.bottom, Space.s5 + bottomInset)
-        .frame(maxWidth: ListMetrics.sheetWidth)
+        .frame(maxWidth: SheetMetrics.maxWidth)
         .background(Ink.surface)
         .clipShape(
             UnevenRoundedRectangle(
@@ -634,40 +619,25 @@ struct SheetContainer<Content: View>: View {
                 style: .continuous
             )
         )
-        // A black shadow on graphite is invisible; in dark the sheet is
-        // separated by a rule and by the scrim instead (§4.5).
-        .overlay(alignment: .top) {
-            if scheme == .dark {
-                Rectangle().fill(Ink.ruleStrong).frame(height: hairline.value)
-            }
-        }
-        .shadow(
-            color: .black.opacity(scheme == .dark ? 0.5 : Elevation.sheet[0].opacity),
-            radius: Elevation.sheet[0].radius,
-            y: Elevation.sheet[0].y
-        )
-        .shadow(
-            color: .black.opacity(scheme == .dark ? 0 : Elevation.sheet[1].opacity),
-            radius: Elevation.sheet[1].radius,
-            y: Elevation.sheet[1].y
-        )
+        .sheetElevation()
         .frame(maxWidth: .infinity)
-        .offset(y: shown && !leaving ? drag : Space.s6)
-        .opacity(shown && !leaving ? 1 : 0)
+        // Reduced motion keeps the fade and drops the translate (§6.6).
+        .offset(y: (presented ? 0 : (reduceMotion ? 0 : Space.s6)) + drag)
+        .opacity(presented ? 1 : 0)
         .gesture(dismissDrag)
     }
 
     private func head(_ title: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: Space.s3) {
-            Text(title)
-                .typeStyle(TypeScale.labelCJK, weight: .semibold, cap: Cap.label)
-                .foregroundStyle(Ink.ink500)
+            Text(title).textStyle(.label)
             Spacer(minLength: 0)
+            // §5.9: a modal that is not the capture sheet gets a close control.
+            // The capture sheet passes no title and so has none.
             Button(action: requestClose) {
                 StrokeIcon(glyph: .xmark)
                     .stroke(style: StrokeStyle(lineWidth: iconStroke, lineCap: .butt, lineJoin: .miter))
                     .foregroundStyle(Ink.ink700)
-                    .frame(width: Space.s6, height: Space.s6)
+                    .frame(width: Space.s5, height: Space.s5)
                     .frame(width: Layout.hitTarget, height: Layout.hitTarget)
                     .contentShape(Rectangle())
             }
@@ -679,14 +649,14 @@ struct SheetContainer<Content: View>: View {
         .padding(.bottom, Space.s4)
     }
 
-    /// 1:1 tracking down; dismissed past 88 of travel or 600pt/s of velocity.
+    /// 1:1 tracking down; dismissed past 88 of travel or 600pt/s of velocity,
+    /// and returned with the sheet's own curve below either.
     private var dismissDrag: some Gesture {
         DragGesture(minimumDistance: Space.s2)
             .onChanged { value in drag = max(0, value.translation.height) }
             .onEnded { value in
-                let far = value.translation.height > Space.s10 + Space.s6
-                let fast = value.velocity.height > 600
-                if far || fast {
+                if value.translation.height > SheetMetrics.dismissTravel
+                    || value.velocity.height > SheetMetrics.dismissVelocity {
                     requestClose()
                 } else {
                     withAnimation(eased(Motion.sheetDismiss, reduced: reduceMotion)) { drag = 0 }
@@ -697,7 +667,13 @@ struct SheetContainer<Content: View>: View {
     private func requestClose() {
         guard !leaving else { return }
         leaving = true
-        withAnimation(eased(Motion.sheetDismiss, reduced: reduceMotion)) { shown = false }
+        withAnimation(.linear(duration: Motion.scrimFade)) { veiled = false }
+        withAnimation(eased(Motion.sheetDismiss, reduced: reduceMotion)) {
+            presented = false
+            drag = 0
+        }
+        // The caller tears the sheet down; it waits out the exit first so the
+        // dismissal is seen rather than cut.
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(Int(Motion.sheetDismiss * 1000)))
             onClose()
@@ -705,10 +681,11 @@ struct SheetContainer<Content: View>: View {
     }
 }
 
-// ── LabelledField ────────────────────────────────────────────────────
+// MARK: - LabelledField
 
 /// A label over a sunken well with a bottom rule. The rule swaps to the
-/// state-bearing colour while the cursor is in the field; nothing else moves.
+/// state-bearing colour while the cursor is in the field (§2.3); nothing else
+/// moves — no fill, no lift, no ring.
 struct LabelledField: View {
     let label: String
     @Binding var text: String
@@ -721,7 +698,7 @@ struct LabelledField: View {
     var maxLength: Int? = nil
 
     @FocusState private var focused: Bool
-    private var hairline = HairlineWidth()
+    @Environment(\.displayScale) private var displayScale
 
     init(
         label: String,
@@ -747,23 +724,20 @@ struct LabelledField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s2) {
-            Text(label)
-                .typeStyle(TypeScale.labelCJK, weight: .semibold, cap: Cap.label)
-                .foregroundStyle(Ink.ink500)
+            Text(label).textStyle(.label)
 
             HStack(spacing: Space.s2) {
                 input
-                    .typeStyle(TypeScale.body, weight: .regular, cap: Cap.body, mono: mono)
-                    .foregroundStyle(disabled ? Ink.ink300 : Ink.ink900)
+                    .textStyle(.body, mono: mono, ink: disabled ? Ink.ink300 : Ink.ink900)
                     .focused($focused)
                     .disabled(disabled)
                     .keyboardType(keyboard)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
+                    // A passphrase and a fingerprint are typed exactly; prose is
+                    // not, so only the mono wells refuse the keyboard's help.
+                    .textInputAutocapitalization(mono || secure ? .never : .sentences)
+                    .autocorrectionDisabled(mono || secure)
                 if let suffix {
-                    Text(suffix)
-                        .typeStyle(TypeScale.body, weight: .regular, cap: Cap.body)
-                        .foregroundStyle(Ink.ink500)
+                    Text(suffix).textStyle(.body, ink: Ink.ink500)
                 }
             }
             .padding(.horizontal, Space.s3)
@@ -773,7 +747,7 @@ struct LabelledField: View {
             .overlay(alignment: .bottom) {
                 Rectangle()
                     .fill(focused ? Ink.ink500 : Ink.rule)
-                    .frame(height: hairline.value)
+                    .frame(height: Layout.hairline / max(displayScale, 1))
             }
         }
         .onChange(of: text) { _, next in
@@ -786,6 +760,7 @@ struct LabelledField: View {
 
     @ViewBuilder
     private var input: some View {
+        // R8: a placeholder is small text and takes ink500, never ink300.
         let prompt = Text(placeholder).foregroundStyle(Ink.ink500)
         if secure {
             SecureField("", text: $text, prompt: prompt)
@@ -795,10 +770,10 @@ struct LabelledField: View {
     }
 }
 
-// ── StepperField ─────────────────────────────────────────────────────
+// MARK: - StepperField
 
-/// Minus, the value, plus. The two icons are the only ones here, and they are
-/// drawn from the same 24-grid geometry as the web set — SF Symbols are
+/// Minus, the value, plus. The two icons are the only ones in this file and they
+/// are drawn from the same 24-grid geometry as the web set — SF Symbols are
 /// forbidden because they have no CSS equivalent (§8.1).
 struct StepperField: View {
     let label: String
@@ -807,7 +782,7 @@ struct StepperField: View {
     var min: Int? = nil
     var max: Int? = nil
     /// The printed form. A money stepper passes a formatter here rather than
-    /// letting this view compose an amount.
+    /// letting this view compose an amount (§3.6).
     var format: ((Int) -> String)? = nil
 
     init(
@@ -834,11 +809,12 @@ struct StepperField: View {
         HStack(spacing: Space.s2) {
             key(.minus, label: S.t(.commonDecrease), disabled: value <= lo) { set(value - step) }
             Text(shown)
-                .typeStyle(TypeScale.row, weight: .medium, cap: Cap.row)
-                .foregroundStyle(Ink.ink900)
+                .textStyle(.row, ink: Ink.ink900)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             key(.plus, label: S.t(.commonIncrease), disabled: value >= hi) { set(value + step) }
         }
+        // One element with an adjustable action: a screen reader steps the value
+        // rather than hunting for two 44-point squares.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
         .accessibilityValue(shown)
@@ -867,24 +843,27 @@ struct StepperField: View {
             StrokeIcon(glyph: glyph)
                 .stroke(style: StrokeStyle(lineWidth: iconStroke, lineCap: .butt, lineJoin: .miter))
                 .foregroundStyle(disabled ? Ink.ink300 : Ink.ink700)
-                .frame(width: Space.s6, height: Space.s6)
+                .frame(width: Space.s5, height: Space.s5)
                 .frame(width: Layout.hitTarget, height: Layout.hitTarget)
                 .clipShape(RoundedRectangle(cornerRadius: Radius.field, style: .continuous))
         }
-        .buttonStyle(BarPressStyle(pressedGround: Ink.surfaceSunken, pressedOpacity: 1))
+        .buttonStyle(BarPressStyle(pressedGround: Ink.surfaceSunken))
         .disabled(disabled)
         .accessibilityLabel(label)
     }
 }
 
-// ── EmptyStateView ───────────────────────────────────────────────────
+// MARK: - EmptyStateView
 
-/// §5.11. A sentence and, at most, one text link. No illustration, no icon, no
-/// large glyph. Offset from the top of the content area rather than centred in
-/// it, and set in the same rhythm as a populated section, so an empty state
-/// does not leave a hole in the page.
+/// §5.11. A sentence, at most one further sentence, and at most one text link.
+/// No illustration, no icon, no large glyph. It is offset from the top of the
+/// content area rather than centred in it — a centred sentence reads as a
+/// placeholder screen — and it is set in the same rhythm as a populated section,
+/// so an empty state does not leave a hole in the page.
 struct EmptyStateView<Action: View>: View {
     let title: String
+    /// The derivation or the count beneath the title. Named with a trailing
+    /// underscore because `body` is the view itself.
     var body_: String?
     @ViewBuilder var action: Action
 
@@ -897,13 +876,11 @@ struct EmptyStateView<Action: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s2) {
             Text(title)
-                .typeStyle(TypeScale.body, weight: .regular, cap: Cap.body)
-                .foregroundStyle(Ink.ink700)
+                .textStyle(.body, ink: Ink.ink700)
                 .fixedSize(horizontal: false, vertical: true)
             if let body_ {
                 Text(body_)
-                    .typeStyle(TypeScale.body, weight: .regular, cap: Cap.body)
-                    .foregroundStyle(Ink.ink500)
+                    .textStyle(.body, ink: Ink.ink500)
                     .fixedSize(horizontal: false, vertical: true)
             }
             action.padding(.top, Space.s2)
@@ -920,19 +897,22 @@ extension EmptyStateView where Action == EmptyView {
     }
 }
 
-// ── ProgressRule ─────────────────────────────────────────────────────
+// MARK: - ProgressRule
 
-/// §5.10. A 1px rule with its achieved portion overdrawn. No cap, no radius, no
-/// track fill, no percentage badge — the percentage belongs to the sentence
-/// above it, where it can be read.
+/// §5.10, the 心愿物 progress rule. A hairline with its achieved portion
+/// overdrawn from the left. No cap, no radius, no track fill, no percentage
+/// badge — the percentage belongs to the sentence above it, where it can be read
+/// rather than estimated.
 struct ProgressRule: View {
     let fraction: Double
-    var tone: FigureTone = .neutral
+    /// `nil` is the neutral mark, ink700. The four chromatic roles are the ones
+    /// `MoneyView` names, because they are roles of the product and not of money.
+    var tone: MoneyTone? = nil
     var accessibilityLabel: String? = nil
 
-    private var hairline = HairlineWidth()
+    @Environment(\.displayScale) private var displayScale
 
-    init(fraction: Double, tone: FigureTone = .neutral, accessibilityLabel: String? = nil) {
+    init(fraction: Double, tone: MoneyTone? = nil, accessibilityLabel: String? = nil) {
         self.fraction = fraction
         self.tone = tone
         self.accessibilityLabel = accessibilityLabel
@@ -942,10 +922,12 @@ struct ProgressRule: View {
         let done = clamp01(fraction)
         return Rectangle()
             .fill(Ink.rule)
-            .frame(height: hairline.value)
+            .frame(height: Layout.hairline / max(displayScale, 1))
             .overlay(alignment: .leading) {
                 GeometryReader { geo in
-                    Rectangle().fill(tone.color).frame(width: geo.size.width * done)
+                    Rectangle()
+                        .fill(tone?.ink ?? Ink.ink700)
+                        .frame(width: geo.size.width * done)
                 }
             }
             .accessibilityHidden(accessibilityLabel == nil)
@@ -953,24 +935,26 @@ struct ProgressRule: View {
     }
 }
 
-// ── DepletingRing ────────────────────────────────────────────────────
+// MARK: - DepletingRing
 
-/// §5.10, the 冷静期弧. `fraction` is what remains, and the ring runs no timer
-/// of its own: the caller repaints it once a minute, which is the whole cadence.
+/// §5.10, the 冷静期弧. `fraction` is what remains; the ring runs no timer of its
+/// own, because the caller repaints every visible arc once a minute on one
+/// shared cadence, and that cadence is the whole animation.
 ///
-/// It draws the track as well as the arc. A bare arc with no companion ring
-/// reads as a stray mark once it is nearly depleted — which is exactly the
-/// moment it matters most.
+/// It draws the track as well as the arc, which is this client's one departure
+/// from the web ring: a bare arc with no companion circle reads as a stray mark
+/// once it is nearly depleted, which is exactly the moment it matters most.
 struct DepletingRing: View {
     let fraction: Double
+    /// 18 in a ledger row's stamp slot, 32 on a 待购 row. 18 = 16 + 4/2.
     var size: CGFloat = Space.s4 + Space.s1 / 2
-    var tone: FigureTone = .held
+    var tone: MoneyTone? = .held
     var accessibilityLabel: String? = nil
 
     init(
         fraction: Double,
         size: CGFloat = Space.s4 + Space.s1 / 2,
-        tone: FigureTone = .held,
+        tone: MoneyTone? = .held,
         accessibilityLabel: String? = nil
     ) {
         self.fraction = fraction
@@ -982,14 +966,14 @@ struct DepletingRing: View {
     var body: some View {
         let remaining = clamp01(fraction)
         return ZStack {
-            Circle()
-                .strokeBorder(Ink.rule, lineWidth: Layout.hairline)
+            Circle().strokeBorder(Ink.rule, lineWidth: Layout.hairline)
             // Twelve o'clock start, depleting counter-clockwise: trimming the
-            // tail and rotating a quarter turn back puts the start at the top
-            // and sends the remainder the other way round.
+            // tail and turning back a quarter puts the start at the top and
+            // sends what is left the other way round.
             Circle()
                 .trim(from: 1 - remaining, to: 1)
-                .stroke(tone.color, style: StrokeStyle(lineWidth: Layout.hairline, lineCap: .butt))
+                .stroke(tone?.ink ?? Ink.ink700,
+                        style: StrokeStyle(lineWidth: Layout.hairline, lineCap: .butt))
                 .rotationEffect(.degrees(-90))
                 .padding(Layout.hairline / 2)
         }
@@ -999,26 +983,27 @@ struct DepletingRing: View {
     }
 }
 
-// ── LedgerRow ────────────────────────────────────────────────────────
+// MARK: - LedgerRow
 
 /// §5.4, the most-used component in the product. Time in mono, category, payee,
-/// the intent stamp, and the amount in the fixed 96 gutter so a column of
-/// figures reads as a column.
+/// the intent stamp, and the amount in the fixed 96 gutter so that a column of
+/// figures reads as a column: the gutter never flexes, never shrinks and is
+/// never ellipsised.
 ///
-/// The amount is a slot rather than a `Fen`, because DESIGN §3.6 gives the
-/// composition of a money figure to `MoneyText` and to nothing else. `spoken`
-/// is the row's whole accessible name — one element per record, with 更正 and
-/// 冲销 folded into it rather than left as a second thing to arrow past (§9.6).
+/// The amount is a slot rather than a `Fen` because §3.6 gives the composition
+/// of a money figure to `MoneyView` and to nothing else. `spoken` is the row's
+/// whole accessible name — one element per record, with 更正 and 冲销 folded into
+/// it rather than left as further things to arrow past (§9.6).
 struct LedgerRow<Amount: View>: View {
     let time: String
     let category: String
     let payee: String
     var intent: Intent? = nil
-    /// A 冲销 parent: the amount is struck through, the reversal prints beneath.
+    /// A 冲销 parent: the amount is struck through and the reversal prints below.
     var struck: Bool = false
     /// The cooling arc takes the stamp slot while an entry is held (§5.4).
     var holdFraction: Double? = nil
-    /// 更正 / 冲销 lines, printed under the row they correct; parent and child
+    /// 更正 / 冲销 lines, printed under the row they correct. Parent and child
     /// share one hairline, because the pair is one record.
     var subLines: [String] = []
     let spoken: String
@@ -1055,14 +1040,15 @@ struct LedgerRow<Amount: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             if let onTap {
                 Button(action: onTap) { line }
-                    .buttonStyle(BarPressStyle(pressedGround: Ink.surfaceSunken, pressedOpacity: 1))
+                    .buttonStyle(BarPressStyle(pressedGround: Ink.surfaceSunken))
             } else {
                 line
             }
             ForEach(Array(subLines.enumerated()), id: \.offset) { _, sub in
                 Text(sub)
-                    .typeStyle(TypeScale.label, weight: .regular, cap: Cap.mono, mono: true)
-                    .foregroundStyle(Ink.ink500)
+                    .textStyle(.mono)
+                    // Indented to the category column: a correction is filed
+                    // under the line it corrects, not beside it.
                     .padding(.leading, Space.s8 + Space.s3)
                     .padding(.bottom, Space.s2)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -1075,7 +1061,7 @@ struct LedgerRow<Amount: View>: View {
     }
 
     /// At accessibility sizes the row reflows to two lines rather than
-    /// truncating: the amount gutter is never shrunk and never ellipsised.
+    /// truncating (§5.4): the amount gutter is kept whole and the row grows.
     private var stacked: Bool { typeSize >= .accessibility1 }
 
     @ViewBuilder
@@ -1111,26 +1097,23 @@ struct LedgerRow<Amount: View>: View {
     }
 
     private var timeText: some View {
-        // The scale has no mono token; §5.4 sets the row timestamp at the label
-        // size with no tracking, which is what the web row renders too.
         Text(time)
-            .typeStyle(TypeScale.label, weight: .regular, cap: Cap.mono, mono: true)
-            .foregroundStyle(Ink.ink500)
+            .textStyle(.mono)
             .frame(width: Space.s8, alignment: .leading)
     }
 
     private var categoryText: some View {
         Text(category)
-            .typeStyle(TypeScale.body, weight: .regular, cap: Cap.body)
-            .foregroundStyle(Ink.ink700)
+            .textStyle(.body)
             .lineLimit(1)
+            // A category is at most five characters and is never truncated; the
+            // note beside it is what gives way.
             .fixedSize(horizontal: true, vertical: false)
     }
 
     private var payeeText: some View {
         Text(payee)
-            .typeStyle(TypeScale.body, weight: .regular, cap: Cap.body)
-            .foregroundStyle(Ink.ink500)
+            .textStyle(.body, ink: Ink.ink500)
             .lineLimit(1)
             .truncationMode(.tail)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1142,9 +1125,9 @@ struct LedgerRow<Amount: View>: View {
             DepletingRing(fraction: holdFraction)
                 .frame(width: Space.s4, alignment: .center)
         } else if let intent {
+            // 必 → 想 → 冲 is a value ramp, not a hue ramp (§2.6).
             Text(S.t(glyphKey(intent)))
-                .typeStyle(TypeScale.label, weight: intent == .impulse ? .semibold : .medium, cap: Cap.mono)
-                .foregroundStyle(stampInk(intent))
+                .typeRole(.mono, weight: intent.stampWeight, ink: intent.ink)
                 .frame(width: Space.s4, alignment: .center)
         } else {
             Color.clear.frame(width: Space.s4, height: 0)
@@ -1154,18 +1137,8 @@ struct LedgerRow<Amount: View>: View {
     private var amountSlot: some View {
         amount
             .strikethrough(struck, color: Ink.ink500)
-            .frame(minWidth: ListMetrics.amountColumn, alignment: .trailing)
+            .frame(minWidth: Theme.amountGutter, alignment: .trailing)
             .fixedSize(horizontal: true, vertical: false)
-    }
-
-    /// §2.6. 必要 → 想要 → 冲动 is a value ramp, not a hue ramp: it reads at a
-    /// glance down a column and costs no chroma.
-    private func stampInk(_ intent: Intent) -> Color {
-        switch intent {
-        case .need: return Ink.ink500
-        case .want: return Ink.ink700
-        case .impulse: return Ink.ink900
-        }
     }
 
     private func glyphKey(_ intent: Intent) -> StringKey {
@@ -1177,11 +1150,11 @@ struct LedgerRow<Amount: View>: View {
     }
 }
 
-// ── icons ────────────────────────────────────────────────────────────
+// MARK: - Icons
 
-/// §8.2. Drawn from the same 24-grid `d` geometry as the web set, on the 0.5
-/// grid so a 1.5 stroke lands on pixel boundaries. Two of the fourteen icons
-/// appear in this file; the rest belong to the screens that use them.
+/// §8.2 and §8.3. Drawn from the same 24-grid `d` geometry as the web set, on
+/// the 0.5 grid so a 1.5 stroke lands on pixel boundaries. Three of the fourteen
+/// icons appear in this file; the rest belong to the screens that use them.
 private struct StrokeIcon: Shape {
     enum Glyph { case xmark, plus, minus }
 
@@ -1207,8 +1180,10 @@ private struct StrokeIcon: Shape {
     }
 }
 
-// ── shared ───────────────────────────────────────────────────────────
+// MARK: - Shared
 
+/// A fraction that arrives as a division by zero is 0, never a NaN that would
+/// paint an arc of undefined length (§7.2).
 private func clamp01(_ n: Double) -> Double {
     n.isFinite ? Swift.min(1, Swift.max(0, n)) : 0
 }

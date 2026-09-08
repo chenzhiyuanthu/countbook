@@ -14,3 +14,6 @@ xcuserdata/
 *.xcuserstate
 .vite/
 coverage/
+
+# Credentials for the live sync integration tests; never committed.
+.integration.json

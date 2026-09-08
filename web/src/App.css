@@ -7,8 +7,8 @@
   min-height: 60dvh;
 }
 
-/* The tab bar and the capture button sit above the scroller, so the scroller
-   pads for them rather than the page growing a footer. */
+/* The tab bar floats over the scroller, so the scroller pads for it rather than
+   the page growing a footer: without this the last row hides under the bar. */
 .app > .scroll {
   padding-bottom: calc(var(--s-10) + var(--s-6) + env(safe-area-inset-bottom));
 }

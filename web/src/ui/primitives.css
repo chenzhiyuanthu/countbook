@@ -344,6 +344,9 @@
   stroke-width: 1;
   stroke-linecap: butt;
 }
+/* The unfilled remainder of the circle, so a nearly-spent arc still reads as a
+   dial rather than as a stray mark beside the row. */
+.pr-ring .pr-ring__track { stroke: var(--c-rule); }
 /* Twelve o'clock start, depleting counter-clockwise: the mirror reverses the
    sweep without moving where it begins. */
 .pr-ring__arc {
