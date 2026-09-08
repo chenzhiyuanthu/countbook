@@ -128,7 +128,11 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 /* ── layout ─────────────────────────────────────────────────────────── */
 
 .app {
-  min-height: 100dvh;
+  /* A fixed height, not a minimum. With min-height the scroller below grows to
+     its content and the document scrolls instead, which carries the tab bar off
+     the bottom of the viewport until you reach the end of the ledger. */
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   background: var(--c-paper);
@@ -142,8 +146,12 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 }
 
 .scroll {
-  flex: 1;
+  flex: 1 1 auto;
+  /* A flex item will not shrink below its content unless told to, which would
+     defeat the overflow above. */
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   padding-bottom: calc(var(--s-10) + env(safe-area-inset-bottom));
 }
