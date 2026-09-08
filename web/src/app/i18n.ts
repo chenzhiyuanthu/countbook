@@ -347,6 +347,7 @@ export const STRINGS = {
   'standard.saved': ['已保存，并记入修订记录', 'Saved, and written to the revision record'],
   'standard.reasonThreshold': ['改动超过 20%，写一句事由', 'A change over 20% needs a reason'],
   'standard.revisionsEmpty': ['还没有修订', 'No revisions yet'],
+  'standard.suggestColumn': ['建议', 'Suggested'],
 
   'settings.reckoningHour': ['时刻', 'Hour'],
   'settings.yuan': ['元', 'yuan'],

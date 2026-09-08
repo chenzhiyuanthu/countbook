@@ -202,7 +202,13 @@ function StandardSection() {
       </div>
 
       <div className="settings__block">
-        <Label>{t('standard.perCategory')}</Label>
+        {/* Three columns, named once at the top: the unit stands in the header
+            rather than after every figure, which is what lets a row be a row. */}
+        <div className="settings__cat-head">
+          <Label>{t('standard.perCategory')}</Label>
+          <span className="t-label ink-500 settings__cat-unit">{t('settings.yuan')}</span>
+          <span className="t-label ink-500 settings__cat-suggest">{t('standard.suggestColumn')}</span>
+        </div>
         <ul>
           {categories.map((c) => {
             const name = c.nameEn && ledger.settings.locale === 'en' ? c.nameEn : c.name
@@ -212,7 +218,7 @@ function StandardSection() {
                 <label className="settings__cat-line">
                   <span className="t-body settings__cat-name">{name}</span>
                   <input
-                    className="settings__amount t-row"
+                    className="settings__amount t-body"
                     type="text"
                     inputMode="decimal"
                     value={per[c.id] ?? ''}
@@ -220,22 +226,24 @@ function StandardSection() {
                     onChange={(e) => setPer((prev) => ({ ...prev, [c.id]: e.target.value }))}
                   />
                 </label>
-                {suggested !== undefined && suggested > 0 ? (
-                  <div className="settings__propose">
-                    <span className="t-label ink-300">{t('standard.suggest', { amount: format(suggested) })}</span>
-                    <LinkButton
-                      ariaLabel={`${name} · ${t('standard.accept')}`}
-                      onClick={() => setPer((prev) => ({ ...prev, [c.id]: yuan(suggested) }))}
-                    >
-                      {t('standard.accept')}
-                    </LinkButton>
-                  </div>
-                ) : null}
+                <span className="settings__cat-suggest">
+                  {suggested !== undefined && suggested > 0 ? (
+                    <>
+                      <span className="t-mono settings__figure ink-300">{format(suggested)}</span>
+                      <LinkButton
+                        ariaLabel={`${name} · ${t('standard.suggest', { amount: format(suggested) })} · ${t('standard.accept')}`}
+                        onClick={() => setPer((prev) => ({ ...prev, [c.id]: yuan(suggested) }))}
+                      >
+                        {t('standard.accept')}
+                      </LinkButton>
+                    </>
+                  ) : null}
+                </span>
               </li>
             )
           })}
         </ul>
-        <p className={`t-label ${unallocated < 0 ? 'fig-over' : 'ink-500'}`}>
+        <p className={`t-label settings__alloc ${unallocated < 0 ? 'fig-over' : 'ink-500'}`}>
           {unallocated < 0
             ? t('standard.allocOver', { a: format(allocated), b: format(-unallocated) })
             : t('standard.alloc', { a: format(allocated), b: format(monthlyFen ?? 0) })}

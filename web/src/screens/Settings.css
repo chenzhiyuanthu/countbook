@@ -46,18 +46,22 @@
   gap: var(--s-3);
 }
 
-/* A text action still owns a full hit target; the padding is pulled back out
-   so the words stay on the baseline grid. */
+/* The text link of DESIGN.md §5.6: ink-700 under a hairline rule, never a
+   filled box and never heavier than the figure it acts on. It still owns a full
+   hit target; the padding is pulled back out so the words stay on the grid. */
 .settings__link {
   display: inline-flex;
   align-items: center;
   min-height: var(--l-hit-target);
   padding-inline: var(--s-2);
   margin-inline: calc(var(--s-2) * -1);
-  color: var(--c-ink900);
-  font-weight: 500;
+  color: var(--c-ink700);
+  text-decoration: underline;
+  text-decoration-thickness: var(--l-hairline);
+  text-underline-offset: 2px;
 }
-.settings__link:disabled { color: var(--c-ink300); cursor: default; }
+.settings__link:hover { color: var(--c-ink900); }
+.settings__link:disabled { color: var(--c-ink300); text-decoration: none; cursor: default; }
 
 .settings__external {
   display: inline-flex;
@@ -77,9 +81,36 @@
   gap: var(--s-3);
 }
 
-.settings__cat { border-bottom: var(--l-hairline) solid var(--c-rule); }
+/* SCREENS.md §8.1 draws the per-category standards as a table: name, the
+   amount column, the suggestion. One 44 row each, header cells naming the
+   columns, hairline under every row — the ledger's own idiom. */
+.settings__cat-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding-bottom: var(--s-2);
+  border-bottom: var(--l-hairline) solid var(--c-rule-strong);
+}
+.settings__cat-head > :first-child { flex: 1; min-width: 0; }
+.settings__cat-unit {
+  flex: none;
+  width: var(--pr-gutter-amount);
+  padding-inline-end: var(--s-3);
+  text-align: right;
+}
 
+.settings__cat {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  border-bottom: var(--l-hairline) solid var(--c-rule);
+}
+
+/* The label is the row, so the whole 44 band focuses the field — the well
+   itself is inset to keep two neighbouring wells from fusing into one column. */
 .settings__cat-line {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: var(--s-3);
@@ -88,21 +119,50 @@
 .settings__cat-name {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--c-ink700);
 }
 
-/* The 96 amount gutter, present on every list in the app (§4.1). */
+/* The affordance is the well, not the alignment. A per-category standard gets
+   exactly the ground, radius and state rule of the 月度标准 field, at the width
+   of the amount column rather than of the row: it is a cell in a table, and the
+   96 gutter is where every figure in this app already sits (§4.1). */
 .settings__amount {
   flex: none;
   width: var(--pr-gutter-amount);
-  padding-block: var(--s-2);
+  min-height: calc(var(--l-hit-target) - var(--s-2));
+  padding-inline: var(--s-3);
+  background: var(--c-surface-sunken);
+  border-radius: var(--r-field);
+  border-bottom: var(--l-hairline) solid var(--c-rule);
   text-align: right;
   color: var(--c-ink900);
   font-family: var(--f-mono);
 }
+.settings__amount:focus { border-bottom-color: var(--c-ink500); }
 .settings__amount::placeholder { color: var(--c-ink500); }
 
-.settings__cat .settings__propose { padding-bottom: var(--s-2); }
+.settings__cat-suggest {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s-2);
+  width: calc(var(--pr-gutter-amount) + var(--s-6));
+}
+
+/* The total closes the table, so it sits under the last rule rather than on it. */
+.settings__alloc { padding-top: var(--s-3); }
+
+/* A suggestion is an aside inside a row, so it takes the small size the ledger
+   uses for the same job; label tracking is for capitals, not for figures. */
+.settings__figure,
+.settings__cat .settings__link {
+  font-size: var(--t-label-size);
+  letter-spacing: 0;
+}
 
 .settings__name {
   flex: 1;
@@ -178,6 +238,8 @@
 @media (min-resolution: 2dppx) {
   .settings__row,
   .settings__cat,
+  .settings__cat-head,
+  .settings__amount,
   .settings__revision,
   .settings__device { border-bottom-width: 0.5px; }
 }

@@ -12,3 +12,13 @@
 .app > .scroll {
   padding-bottom: calc(var(--s-10) + var(--s-6) + env(safe-area-inset-bottom));
 }
+
+/* Where the 记 button is shown it hangs over the tail of the list, so the tail
+   is lengthened by exactly what the button covers: its own height, the gap it
+   keeps above the tab bar, and the bar itself. Without this the last row's
+   figure can never be scrolled out from under the ink. */
+.app > .scroll--capture {
+  padding-bottom: calc(
+    var(--capture-h) + var(--capture-gap) + var(--tabbar-h) + env(safe-area-inset-bottom)
+  );
+}

@@ -17,6 +17,11 @@ const Settings = lazy(() => import('./screens/Settings'))
 const Capture = lazy(() => import('./screens/Capture'))
 const Reckoning = lazy(() => import('./screens/Reckoning'))
 
+// The 记 button is offered only where logging a purchase is a plausible next
+// action. On a report, a wishlist or a settings page it is an obstruction: it
+// would sit over a figure that the reader came to read.
+const CAPTURE_TABS: readonly TabId[] = ['today', 'ledger']
+
 function Shell() {
   const { ready, t, ledger, today, now } = useStore()
   const [tab, setTab] = useState<TabId>('today')
@@ -43,9 +48,11 @@ function Shell() {
     )
   }
 
+  const capturable = CAPTURE_TABS.includes(tab)
+
   return (
     <div className="app">
-      <main className="scroll" id="main">
+      <main className={`scroll${capturable ? ' scroll--capture' : ''}`} id="main">
         <Suspense fallback={<div className="screen-fallback" />}>
           {tab === 'today' && <Today onCapture={() => setCapturing(true)} onReckon={() => setReckoning(true)} />}
           {tab === 'ledger' && <Ledger />}
@@ -55,7 +62,7 @@ function Shell() {
         </Suspense>
       </main>
 
-      <CaptureButton onClick={() => setCapturing(true)} label={t('capture.title')} />
+      {capturable && <CaptureButton onClick={() => setCapturing(true)} label={t('capture.title')} />}
       <TabBar current={tab} onChange={setTab} />
 
       <Suspense fallback={null}>

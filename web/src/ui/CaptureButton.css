@@ -2,18 +2,26 @@
    scroller reserves the button's height plus its gap, so scrolling to the end
    of a ledger still ends on a readable row. */
 
+:root {
+  /* Published for the scroller, which must reserve this much of its tail so a
+     row can always be scrolled out from under the button. */
+  --capture-h: calc(var(--s-9) + var(--s-2));
+  --capture-gap: var(--s-4);
+}
+
 .capture-button {
   position: fixed;
   right: calc(var(--l-gutter) + env(safe-area-inset-right));
   bottom: calc(
-    var(--tabbar-h, calc(var(--l-hit-target) + var(--s-1))) + env(safe-area-inset-bottom) + var(--s-4)
+    var(--tabbar-h, calc(var(--l-hit-target) + var(--s-1))) + env(safe-area-inset-bottom) +
+      var(--capture-gap)
   );
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(var(--s-9) + var(--s-2));
-  height: calc(var(--s-9) + var(--s-2));
+  width: var(--capture-h);
+  height: var(--capture-h);
   border-radius: var(--r-pill);
   background: var(--c-ink900);
   color: var(--c-paper);

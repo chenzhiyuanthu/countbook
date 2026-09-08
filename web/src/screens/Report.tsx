@@ -232,7 +232,7 @@ export default function Report() {
           <Label>{t('report.byCategory')}</Label>
         </div>
         {categoryRows.length === 0 ? (
-          <p className="t-body ink-500">{t('report.tableEmpty')}</p>
+          <p className="report__gate t-body ink-500">{t('report.tableEmpty')}</p>
         ) : (
           <table className="report__table">
             <thead>
@@ -265,7 +265,7 @@ export default function Report() {
           <Label>{t('report.hours')}</Label>
         </div>
         {hourTotal < MIN_HOUR_SAMPLE ? (
-          <p className="report__gate report__gate--plot t-body ink-700">
+          <p className="report__gate t-body ink-700">
             {t('report.hourGate', { n: MIN_HOUR_SAMPLE - hourTotal })}
           </p>
         ) : (

@@ -55,15 +55,34 @@
   color: var(--c-fig-regret);
 }
 
-/* A withheld statistic keeps the height its chart would have taken, so the
-   page does not reflow on the day the sample arrives. */
-.report__gate {
-  min-height: calc(var(--s-10) + var(--s-7));
-  margin: 0;
-  padding-block: var(--s-3);
+/* One device pixel, as base.css draws .rule. A half-pixel-tall box lands
+   between device rows and the browser rounds it outward to two, which set the
+   wish rule heavier than the hairlines it stands among; a whole-pixel box with
+   the ink laid in as a hairline-tall gradient snaps to the grid instead
+   (DESIGN.md §4). */
+.report__wish .pr-progress {
+  background: linear-gradient(var(--c-rule), var(--c-rule)) no-repeat;
 }
-.report__gate--plot {
-  min-height: calc(var(--s-10) + var(--s-8));
+.report__wish .pr-progress__fill {
+  background: linear-gradient(currentColor, currentColor) no-repeat;
+}
+.report__wish .pr-progress,
+.report__wish .pr-progress__fill {
+  height: var(--l-hairline);
+  background-size: 100% var(--l-hairline);
+}
+@media (min-resolution: 2dppx) {
+  .report__wish .pr-progress,
+  .report__wish .pr-progress__fill {
+    background-size: 100% 0.5px;
+  }
+}
+
+/* A withheld statistic is a sentence where the chart would have begun, not a
+   chart-shaped hole: it takes the section's own rhythm and reserves nothing,
+   so the page still reads as a printed statement. */
+.report__gate {
+  padding-block: 0;
 }
 
 .report__note {
