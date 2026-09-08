@@ -1,0 +1,68 @@
+/* Five words on a hairline. Navigation carries no icons, no fill and no badge;
+   the only state it shows is which word you are standing on. */
+
+:root {
+  /* Published for the toast and the 记 button, which anchor above the bar. */
+  --tabbar-h: calc(var(--l-hit-target) + var(--s-1));
+}
+
+.tabbar {
+  flex: 0 0 auto;
+  background-color: var(--c-surface);
+  /* Drawn as a gradient rather than a border: a sub-pixel border drops out at
+     some zoom steps, and this is one of the four rules that carry structure. */
+  background-image: linear-gradient(var(--c-rule-strong), var(--c-rule-strong));
+  background-size: 100% var(--l-hairline);
+  background-repeat: no-repeat;
+  background-position: top;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tabbar__row {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: var(--l-content-max);
+  margin-inline: auto;
+}
+
+.tabbar__cell {
+  flex: 1 1 0;
+  display: flex;
+}
+
+.tabbar__tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tabbar-h);
+  padding-block: var(--s-4);
+  padding-inline: var(--s-1);
+}
+
+.tabbar__label {
+  color: var(--c-ink500);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tabbar__label--heavy {
+  color: var(--c-ink900);
+  font-weight: 600;
+}
+
+.tabbar__rule {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: calc(var(--l-hairline) * 2);
+  background: var(--c-ink900);
+  transition:
+    transform var(--d-stamp-slide) var(--ease),
+    width var(--d-stamp-slide) var(--ease);
+}
+
+.tabbar__tab:focus-visible {
+  outline-offset: calc(var(--s-1) * -1);
+}

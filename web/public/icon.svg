@@ -1,1 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#121216"/><path d="M20 42V22h8" stroke="#F5F5F7" stroke-width="4" fill="none" stroke-linecap="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="据实">
+  <rect width="1024" height="1024" fill="#F7F6F3"/>
+  <rect x="784" y="214" width="16" height="596" fill="#C9C5BB"/>
+  <rect x="196" y="322" width="552" height="52" fill="#111110"/>
+  <rect x="196" y="486" width="828" height="52" fill="#A32A22"/>
+  <rect x="196" y="650" width="372" height="52" fill="#111110"/>
+</svg>

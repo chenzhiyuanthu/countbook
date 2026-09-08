@@ -1,1 +1,32 @@
-{"name":"据实 · Countbook","short_name":"据实","start_url":"./","display":"standalone","background_color":"#0B0B0D","theme_color":"#0B0B0D","icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml"}]}
+{
+  "name": "据实 · Countbook",
+  "short_name": "据实",
+  "description": "记账，不评判。记下每一笔，让数字自己说话。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7F6F3",
+  "theme_color": "#F7F6F3",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
