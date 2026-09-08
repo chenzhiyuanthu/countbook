@@ -1,0 +1,18 @@
+# Paste this block into the Caddyfile of the stack that already owns :80/:443
+# on this host, then restart that Caddy container. `countbook` resolves because
+# deploy.sh attaches both containers to the `countbook-edge` docker network.
+count.czylsy911.art {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options    "nosniff"
+		X-Frame-Options           "DENY"
+		Referrer-Policy           "same-origin"
+		-Server
+	}
+
+	reverse_proxy countbook:8080 {
+		header_up X-Forwarded-Proto {scheme}
+	}
+}

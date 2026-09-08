@@ -1,0 +1,62 @@
+# Two ways to run this:
+#
+#   docker compose up -d                        app only, listening on 127.0.0.1:8788
+#   docker compose --profile edge up -d         app + its own Caddy on :80/:443
+#
+# The `edge` profile is off by default because the intended host already runs a
+# Caddy for another site; binding 80/443 a second time would fail. Add the site
+# block from caddy/countbook.caddy to that existing Caddyfile instead — deploy.sh
+# detects which case applies.
+services:
+  app:
+    build: .
+    image: countbook-server:latest
+    container_name: countbook
+    restart: unless-stopped
+    expose:
+      - "8080"
+    ports:
+      - "127.0.0.1:8788:8080"
+    environment:
+      PORT: 8080
+      DATA_DIR: /data
+      # Set in .env on the host. With no value the server refuses to start
+      # rather than signing sessions with a guessable key.
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET must be set}
+      # Comma-separated origins allowed to call the API from a browser.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://chenzhiyuanthu.github.io}
+      # Leave empty to close registration once your own accounts exist.
+      SIGNUP_CODE: ${SIGNUP_CODE:-}
+    volumes:
+      - ./data:/data
+    networks:
+      - default
+      - edge
+
+  caddy:
+    profiles: ["edge"]
+    image: caddy:2-alpine
+    container_name: countbook-caddy
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  # An external network so an already-running Caddy from another stack can reach
+  # this app by name. deploy.sh creates it if it does not exist.
+  edge:
+    name: countbook-edge

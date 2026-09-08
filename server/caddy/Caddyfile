@@ -1,0 +1,21 @@
+{
+	admin off
+}
+
+# Used only with `docker compose --profile edge up -d`, i.e. when this host has
+# no other Caddy. Otherwise append caddy/countbook.caddy to the existing one.
+count.czylsy911.art {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options    "nosniff"
+		X-Frame-Options           "DENY"
+		Referrer-Policy           "same-origin"
+		-Server
+	}
+
+	reverse_proxy app:8080 {
+		header_up X-Forwarded-Proto {scheme}
+	}
+}

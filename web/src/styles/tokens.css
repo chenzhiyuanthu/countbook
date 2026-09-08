@@ -1,0 +1,146 @@
+/* GENERATED FROM design/tokens.json — DO NOT EDIT.
+   Regenerate with `node scripts/gen-tokens.mjs`.
+   web/src/styles/tokens.css */
+
+:root {
+  color-scheme: light dark;
+
+  /* colour — light */
+  --c-paper: #F7F6F3;
+  --c-surface: #FFFFFF;
+  --c-surface-sunken: #F1EFEA;
+  --c-ink900: #111110;
+  --c-ink700: #35342F;
+  --c-ink500: #6E6C64;
+  --c-ink300: #A5A29A;
+  --c-rule: #E2DFD8;
+  --c-rule-strong: #C9C5BB;
+  --c-fig-over: #A32A22;
+  --c-fig-held: #8A6A1F;
+  --c-fig-spared: #2E5D4B;
+  --c-fig-regret: #514E47;
+  --c-scrim: rgba(17,17,16,0.28);
+  --c-accent-ink: #111110;
+  --c-accent-on: #FFFFFF;
+
+  /* space */
+  --s-0: 0px;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 40px;
+  --s-9: 48px;
+  --s-10: 64px;
+
+  /* radius (web values: circular corners read heavier than iOS continuous ones) */
+  --r-field: 7px;
+  --r-card: 9px;
+  --r-sheet: 14px;
+  --r-pill: 999px;
+
+  /* type */
+  --t-hero-size: 4.rem;
+  --t-hero-weight: 300;
+  --t-hero-tracking: -0.02em;
+  --t-hero-leading: 1.02;
+  --t-screen-size: 2.75rem;
+  --t-screen-weight: 300;
+  --t-screen-tracking: -0.02em;
+  --t-screen-leading: 1.06;
+  --t-section-size: 2.125rem;
+  --t-section-weight: 400;
+  --t-section-tracking: -0.015em;
+  --t-section-leading: 1.12;
+  --t-row-size: 1.0625rem;
+  --t-row-weight: 500;
+  --t-row-tracking: 0em;
+  --t-row-leading: 1.3;
+  --t-body-size: 0.9375rem;
+  --t-body-weight: 400;
+  --t-body-tracking: 0em;
+  --t-body-leading: 1.53;
+  --t-label-size: 0.6875rem;
+  --t-label-weight: 600;
+  --t-label-tracking: 0.14em;
+  --t-label-leading: 1.4;
+  --t-label-cjk-size: 0.6875rem;
+  --t-label-cjk-weight: 600;
+  --t-label-cjk-tracking: 0.08em;
+  --t-label-cjk-leading: 1.4;
+  --t-micro-size: 0.625rem;
+  --t-micro-weight: 500;
+  --t-micro-tracking: 0.06em;
+  --t-micro-leading: 1.4;
+
+  /* motion */
+  --ease: cubic-bezier(0.32, 0.08, 0.24, 1);
+  --d-figure-settle: 220ms;
+  --d-figure-stagger: 18ms;
+  --d-sheet-present: 280ms;
+  --d-sheet-dismiss: 200ms;
+  --d-stamp-slide: 180ms;
+  --d-row-print: 240ms;
+  --d-row-fade: 120ms;
+  --d-verdict-swipe: 260ms;
+  --d-scrim-fade: 200ms;
+
+  /* layout */
+  --l-content-max: 720px;
+  --l-gutter: 20px;
+  --l-hit-target: 44px;
+  --l-row-pad-y: 14px;
+  --l-hairline: 1px;
+
+  /* elevation — the only shadow in the system */
+  --e-sheet: 0 1px 2px rgba(17,17,16,.04), 0 12px 32px -8px rgba(17,17,16,.16);
+
+  /* families — no webfont, no CDN request */
+  --f-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", system-ui,
+    "Segoe UI Variable", "Segoe UI", Roboto, "PingFang SC", "HarmonyOS Sans SC",
+    "Source Han Sans SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+:root[data-theme="dark"] {
+  --c-paper: #121211;
+  --c-surface: #1A1A18;
+  --c-surface-sunken: #0E0E0D;
+  --c-ink900: #F2F0EA;
+  --c-ink700: #C9C6BE;
+  --c-ink500: #8C897F;
+  --c-ink300: #605D56;
+  --c-rule: #2B2A27;
+  --c-rule-strong: #3D3B36;
+  --c-fig-over: #E0655A;
+  --c-fig-held: #D2A64A;
+  --c-fig-spared: #6FA98A;
+  --c-fig-regret: #9A968C;
+  --c-scrim: rgba(0,0,0,0.48);
+  --c-accent-ink: #F2F0EA;
+  --c-accent-on: #121211;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --c-paper: #121211;
+    --c-surface: #1A1A18;
+    --c-surface-sunken: #0E0E0D;
+    --c-ink900: #F2F0EA;
+    --c-ink700: #C9C6BE;
+    --c-ink500: #8C897F;
+    --c-ink300: #605D56;
+    --c-rule: #2B2A27;
+    --c-rule-strong: #3D3B36;
+    --c-fig-over: #E0655A;
+    --c-fig-held: #D2A64A;
+    --c-fig-spared: #6FA98A;
+    --c-fig-regret: #9A968C;
+    --c-scrim: rgba(0,0,0,0.48);
+    --c-accent-ink: #F2F0EA;
+    --c-accent-on: #121211;
+  }
+}

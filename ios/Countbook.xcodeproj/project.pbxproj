@@ -10,6 +10,7 @@
 		3E2735B267295FAD8991415C /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AAD71B1A479FB20A845D2B /* SmokeTests.swift */; };
 		9E82C0804AED63458F0CC69C /* CountbookApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C06BDFA6EF91E62E757010C2 /* CountbookApp.swift */; };
 		ACCCB2221DF52028F1E42924 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 40229A2F49DB5B0C288F3E84 /* Assets.xcassets */; };
+		D67CF4E4F37FE11D80CE533D /* Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 784D0690C8BA0A4EAD26EC94 /* Tokens.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -26,6 +27,7 @@
 		11AAD71B1A479FB20A845D2B /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
 		2645E5116EC6BBF85EF49245 /* CountbookTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CountbookTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		40229A2F49DB5B0C288F3E84 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		784D0690C8BA0A4EAD26EC94 /* Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tokens.swift; sourceTree = "<group>"; };
 		9C713A09D7844A2056AD6AC9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AB3B60F5E1AAACBDFB2627BC /* Countbook.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Countbook.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C06BDFA6EF91E62E757010C2 /* CountbookApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountbookApp.swift; sourceTree = "<group>"; };
@@ -44,9 +46,18 @@
 			isa = PBXGroup;
 			children = (
 				0FFE8E978FBEB506E619AE76 /* App */,
+				5DA360010F5B27625E83418E /* Design */,
 				B604A53EFDAE475E9F73D6BF /* Resources */,
 			);
 			path = Countbook;
+			sourceTree = "<group>";
+		};
+		5DA360010F5B27625E83418E /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				784D0690C8BA0A4EAD26EC94 /* Tokens.swift */,
+			);
+			path = Design;
 			sourceTree = "<group>";
 		};
 		872E8AB4C9F7B7A40AA2A567 /* CountbookTests */ = {
@@ -187,6 +198,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9E82C0804AED63458F0CC69C /* CountbookApp.swift in Sources */,
+				D67CF4E4F37FE11D80CE533D /* Tokens.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

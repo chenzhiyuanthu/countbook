@@ -1,0 +1,10 @@
+{
+  "name": "countbook-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Optional self-hosted sync server for 花得值 · Countbook",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=22" }
+}
