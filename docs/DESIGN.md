@@ -768,7 +768,7 @@ The mandatory intent stamp. Three segments: **必要 · 想要 · 冲动**.
 
 **冷静期弧 (cooling arc).** The only continuous animation in the product.
 - Diameter **18** in a row's stamp slot; **32** on the 待购 row; 1px stroke, **butt cap**, `--fig-held`.
-- Track: none. There is no unfilled companion ring — the arc simply shortens. (The 3-second hold ring is the one place a track exists, and that track is the same colour at 0.4 opacity on a dark ground.)
+- Track: a 1px `--rule` ring beneath the arc. **Amended 2026-09-09**, against the original "no track": at a glance a 14-day arc down to its last few hours is two or three pixels of brass floating beside the row, and it reads as a rendering fault at exactly the moment the item most needs attention. The track costs one hairline and makes the remaining sweep legible as a fraction. (The 3-second hold ring keeps its own track, the same colour at 0.4 opacity on a dark ground.)
 - Start at −90° (12 o'clock), depleting **counter-clockwise**. Remaining sweep = `360 × remaining / total`.
 - **Repaint cadence: once per minute.** Not per frame. Web uses a single `setInterval(60_000)` shared by all visible arcs, aligned to the wall-clock minute; iOS uses `TimelineView(.periodic(from: .now, by: 60))`. Under `prefers-reduced-motion` the arc still updates (it is information, not motion) but the value transition is instant.
 - Accompanied always by a mono countdown `还有 6 天 04:12` in `--t-mono-row` `--fig-held`.
@@ -1203,3 +1203,4 @@ These are the only known differences. Each is deliberate; none may be "fixed" wi
 | Date | Change | By |
 | --- | --- | --- |
 | 2026-09-08 | v1.0 — initial system. `--ink-300` darkened from `#A5A29A`/`#605D56` for 3:1; `--rule-active` introduced so state-bearing rules meet 1.4.11; `--fig-regret` added so red carries exactly one meaning; radius mapping table adopted; hatch added as the non-colour over-channel. | Design |
+| 2026-09-09 | §5.10 — the cooling arc gains a 1px `--rule` track. Seen on the running app: a nearly-elapsed arc is a few pixels of brass beside the row and reads as a rendering fault, which is the worst moment for it to. | Review |

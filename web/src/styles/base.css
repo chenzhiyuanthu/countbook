@@ -133,6 +133,11 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
      the bottom of the viewport until you reach the end of the ledger. */
   height: 100dvh;
   overflow: hidden;
+  /* The containing block for absolutely positioned descendants. Without it a
+     .sr-only box deep inside a scrolled list resolves against the initial
+     containing block at its static position, which is hundreds of pixels below
+     the fold, and the document grows to reach it. */
+  position: relative;
   display: flex;
   flex-direction: column;
   background: var(--c-paper);
@@ -147,6 +152,9 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 
 .scroll {
   flex: 1 1 auto;
+  /* Absolutely positioned content inside the scroller belongs to the scroller,
+     so that it travels with the rows it describes. */
+  position: relative;
   /* A flex item will not shrink below its content unless told to, which would
      defeat the overflow above. */
   min-height: 0;

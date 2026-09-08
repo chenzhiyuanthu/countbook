@@ -190,12 +190,6 @@ export default function Capture({ onClose }: { onClose(): void }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // The note is the promise to your future self, so the optional row opens
-  // itself the moment the cooling path appears.
-  useEffect(() => {
-    if (suspendable) setFieldsOpen(true)
-  }, [suspendable])
-
   // ── long presses ────────────────────────────────────────────────────
 
   const timerRef = useRef(0)
@@ -251,7 +245,7 @@ export default function Capture({ onClose }: { onClose(): void }) {
               the day and 继续记 in the one control strip above the figure. */}
           <button
             type="button"
-            className="capture__optional t-body"
+            className={`capture__optional t-body${filled ? ' capture__optional--filled' : ''}`}
             aria-expanded={fieldsOpen}
             onClick={() => setFieldsOpen((v) => !v)}
           >

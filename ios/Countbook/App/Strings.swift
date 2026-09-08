@@ -77,6 +77,7 @@ enum StringKey: String, CaseIterable, Sendable {
     case captureHoldOverride = "capture.holdOverride"
     case captureOverrideWarned = "capture.overrideWarned"
     case captureSuspended = "capture.suspended"
+    case captureOptional = "capture.optional"
     case ledgerTitle = "ledger.title"
     case ledgerMonth = "ledger.month"
     case ledgerSealed = "ledger.sealed"
@@ -354,6 +355,11 @@ enum StringKey: String, CaseIterable, Sendable {
     case syncPassphraseShort = "sync.passphraseShort"
     case syncCopied = "sync.copied"
     case syncRevokeConfirm = "sync.revokeConfirm"
+    // SCREENS.md Y8 gives the sync state as one word; `sync.offline` and
+    // `sync.error` carry a clause and a message, which a header word cannot.
+    case syncStateOffline = "sync.state.offline"
+    case syncStateError = "sync.state.error"
+    case settingsExportFailed = "settings.exportFailed"
     case commonCancel = "common.cancel"
     case commonDone = "common.done"
     case commonSave = "common.save"
@@ -478,6 +484,7 @@ enum S {
         case .captureHoldOverride: return ("仍要立即记入", "Enter it now anyway")
         case .captureOverrideWarned: return ("仍要立即记入 · {warning}", "Enter it now anyway · {warning}")
         case .captureSuspended: return ("已挂起", "Held")
+        case .captureOptional: return ("备注 · 商家", "Note · Payee")
         case .ledgerTitle: return ("账页", "Ledger")
         case .ledgerMonth: return ("{month}", "{month}")
         case .ledgerSealed: return ("结", "Closed")
@@ -755,6 +762,9 @@ enum S {
         case .syncPassphraseShort: return ("口令至少 8 个字符", "At least 8 characters")
         case .syncCopied: return ("已复制", "Copied")
         case .syncRevokeConfirm: return ("注销这台设备？它需要重新登录。", "Revoke this device? It will have to log in again.")
+        case .syncStateOffline: return ("离线", "Offline")
+        case .syncStateError: return ("同步出错", "Sync error")
+        case .settingsExportFailed: return ("这次导出没能写出文件。", "The export could not be written.")
         case .commonCancel: return ("取消", "Cancel")
         case .commonDone: return ("完成", "Done")
         case .commonSave: return ("保存", "Save")

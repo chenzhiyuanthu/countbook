@@ -25,9 +25,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s-3);
+  /* space-between does the spacing whenever there is room; the gap is only the
+     floor for the narrowest screen in the longest locale. */
+  gap: var(--s-2);
 }
-.capture__head > * { flex: 0 1 auto; min-width: 0; }
+/* The day and 继续记 are fixed points; the optional row is the one that gives,
+   because its label is the only one that can be read short. */
+.capture__head > * { flex: none; white-space: nowrap; }
+.capture__head > .capture__optional { flex: 0 1 auto; min-width: 0; }
 
 .capture__date,
 .capture__keep {
@@ -79,6 +84,28 @@
   text-decoration: underline solid var(--c-rule-strong) var(--l-hairline);
 }
 .capture__pick:focus-within .capture__picked { text-decoration-color: var(--c-ink900); }
+
+.capture__optional {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: var(--l-hit-target);
+  padding-inline: var(--s-2);
+  color: var(--c-ink500);
+}
+/* Closed but carrying something is a different state from closed and empty:
+   a note typed and put away must not read as absent. */
+.capture__optional--filled { color: var(--c-ink700); }
+.capture__optional[aria-expanded='true'] {
+  color: var(--c-ink900);
+  box-shadow: inset 0 calc(var(--l-hairline) * -1) 0 0 var(--c-ink900);
+}
+.capture__optional-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 
 /* ── the figure being keyed ──────────────────────────────────────────── */
 
@@ -144,24 +171,6 @@
 .capture__tier {
   padding-top: var(--s-2);
   color: var(--c-ink500);
-}
-
-.capture__optional {
-  display: flex;
-  align-items: center;
-  gap: var(--s-1);
-  min-height: var(--l-hit-target);
-  padding-inline: var(--s-2);
-  color: var(--c-ink500);
-}
-.capture__optional[aria-expanded='true'] {
-  color: var(--c-ink900);
-  box-shadow: inset 0 calc(var(--l-hairline) * -1) 0 0 var(--c-ink900);
-}
-.capture__optional-label {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .capture__fields {

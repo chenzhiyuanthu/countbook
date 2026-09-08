@@ -13,7 +13,9 @@
 		1BFA3B514814A66A1A6FA7C0 /* ServerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4008985900BBCD4D587C8 /* ServerStore.swift */; };
 		1CB785DFA295AAAD533DED51 /* Categories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 065478351413F5D1766419A1 /* Categories.swift */; };
 		1F4F46BF844D81AD5E1A361F /* Vault.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17AB43030FA7C512588DBAB /* Vault.swift */; };
+		274B5F5EAD2F4FFE84A8BB89 /* ReckoningScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99F9D8FCA34376C5975B217F /* ReckoningScreen.swift */; };
 		2AB6CA3BF8B232F0AC6E9EE9 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F640DFE82DCA7D291AEDCC9 /* Theme.swift */; };
+		2EEE1710A0AF6C83FAB78BF5 /* ReportScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E46B4F640F6CF2E7ACAC5A77 /* ReportScreen.swift */; };
 		3A2558C471777374B54C3E03 /* Compute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26A763A5532F2E45048FCA66 /* Compute.swift */; };
 		3E2735B267295FAD8991415C /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AAD71B1A479FB20A845D2B /* SmokeTests.swift */; };
 		4099DA94BA9B6F7BA8932AC7 /* CryptoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2306E39B15CEE648EF6973EF /* CryptoTests.swift */; };
@@ -23,14 +25,17 @@
 		689CB07685953660D9FBE72B /* GitHubStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F9C049BCCBC6297FAD8A4BC /* GitHubStore.swift */; };
 		69197A9FA8005D805CBFEE7B /* Placeholders.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0415B7F4AEE877691FBCA01 /* Placeholders.swift */; };
 		704FAEF3EC56D6A293EB4635 /* ChartGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C98F747829DB9990B9551FFB /* ChartGeometryTests.swift */; };
+		756C77D8A38E0674B6DF22FF /* CaptureScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 451F9A29BCE525F6F7DB136F /* CaptureScreen.swift */; };
 		79D8BF698DE5FBB8BA403D4C /* GitHubVaultIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7102CCD15A734267FF8CC9 /* GitHubVaultIntegrationTests.swift */; };
 		7C44CE93D0AEF6772307BB10 /* Crypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61F4CF6F07457E4871A77B03 /* Crypto.swift */; };
 		820B8CF3AD6DD73B19209B5A /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D212FC5E95249ACAA94439A /* RootView.swift */; };
 		888F27438D4ECF3BE019720C /* FoldTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF8D49AFDDA0D11F7AD0DC6B /* FoldTests.swift */; };
+		9A4D326CFD1ADB4EBA0A7B4F /* WantsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 007547F000B84CD93C5C2C54 /* WantsScreen.swift */; };
 		9E82C0804AED63458F0CC69C /* CountbookApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C06BDFA6EF91E62E757010C2 /* CountbookApp.swift */; };
 		A9363F9F87DC15D41A233A28 /* DayDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED1EF4F56000BD3BA07F7888 /* DayDate.swift */; };
 		ACCCB2221DF52028F1E42924 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 40229A2F49DB5B0C288F3E84 /* Assets.xcassets */; };
 		AF6D2EAAC2E41E73315E197D /* MoneyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22C0EB6A9E8E1C01B3FBDF71 /* MoneyView.swift */; };
+		B052E957D0AEF9EC67C27DEE /* LedgerScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAF5D53BDEC7E257748B1BA6 /* LedgerScreen.swift */; };
 		C368EC2654CB23528C85C86F /* Money.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CB40F0F4C3707D76B051207 /* Money.swift */; };
 		C7449030602C936F70BBCE41 /* ParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35B4190525A39757208E14E2 /* ParityTests.swift */; };
 		C9106348E23F2C81D9DE645E /* Fold.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFE37A9AC772D98C3F894A54 /* Fold.swift */; };
@@ -38,8 +43,10 @@
 		D4298269F4DB0545C5C437C8 /* SyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D80D6A02EB42A9E16A48F69E /* SyncEngine.swift */; };
 		D67CF4E4F37FE11D80CE533D /* Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 784D0690C8BA0A4EAD26EC94 /* Tokens.swift */; };
 		D803ADA52EAD60F2A078404B /* Strings.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E266D7F9B6716C9C464B14 /* Strings.swift */; };
+		DCC8D78EC505286A4ABDC3AC /* SettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82829D649A55E9706521D61C /* SettingsScreen.swift */; };
 		E2737BDF2E7680C3FA90432A /* Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD54CFE99AA6931EF5F71225 /* Types.swift */; };
 		E94870DAF6FA700582EBE3D9 /* money.json in Resources */ = {isa = PBXBuildFile; fileRef = DB432B0F817D76BF8A8603AC /* money.json */; };
+		F327E19633188F5CDEBFDD8A /* TodayScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4696322E2507A42993C31229 /* TodayScreen.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,6 +60,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		007547F000B84CD93C5C2C54 /* WantsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WantsScreen.swift; sourceTree = "<group>"; };
 		05787AE6557A7131646AA255 /* Charts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Charts.swift; sourceTree = "<group>"; };
 		065478351413F5D1766419A1 /* Categories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Categories.swift; sourceTree = "<group>"; };
 		09E4008985900BBCD4D587C8 /* ServerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerStore.swift; sourceTree = "<group>"; };
@@ -68,15 +76,20 @@
 		3D212FC5E95249ACAA94439A /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		3F9C049BCCBC6297FAD8A4BC /* GitHubStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubStore.swift; sourceTree = "<group>"; };
 		40229A2F49DB5B0C288F3E84 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		451F9A29BCE525F6F7DB136F /* CaptureScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureScreen.swift; sourceTree = "<group>"; };
+		4696322E2507A42993C31229 /* TodayScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayScreen.swift; sourceTree = "<group>"; };
 		61F4CF6F07457E4871A77B03 /* Crypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Crypto.swift; sourceTree = "<group>"; };
 		622B7F94BA2907538B0E168F /* HLC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLC.swift; sourceTree = "<group>"; };
 		784D0690C8BA0A4EAD26EC94 /* Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tokens.swift; sourceTree = "<group>"; };
 		7F640DFE82DCA7D291AEDCC9 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		82829D649A55E9706521D61C /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
+		99F9D8FCA34376C5975B217F /* ReckoningScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReckoningScreen.swift; sourceTree = "<group>"; };
 		9C713A09D7844A2056AD6AC9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9DA516534C905B7AD32E3C8B /* envelope.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = envelope.json; sourceTree = "<group>"; };
 		A17AB43030FA7C512588DBAB /* Vault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vault.swift; sourceTree = "<group>"; };
 		AB3B60F5E1AAACBDFB2627BC /* Countbook.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Countbook.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4E67277440EB39D9E91C127 /* Events.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Events.swift; sourceTree = "<group>"; };
+		BAF5D53BDEC7E257748B1BA6 /* LedgerScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerScreen.swift; sourceTree = "<group>"; };
 		BD54CFE99AA6931EF5F71225 /* Types.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Types.swift; sourceTree = "<group>"; };
 		BF7102CCD15A734267FF8CC9 /* GitHubVaultIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubVaultIntegrationTests.swift; sourceTree = "<group>"; };
 		C06BDFA6EF91E62E757010C2 /* CountbookApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountbookApp.swift; sourceTree = "<group>"; };
@@ -87,6 +100,7 @@
 		DB432B0F817D76BF8A8603AC /* money.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = money.json; sourceTree = "<group>"; };
 		E0415B7F4AEE877691FBCA01 /* Placeholders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Placeholders.swift; sourceTree = "<group>"; };
 		E082060BBA7080049F97B427 /* Store.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Store.swift; sourceTree = "<group>"; };
+		E46B4F640F6CF2E7ACAC5A77 /* ReportScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportScreen.swift; sourceTree = "<group>"; };
 		ED1EF4F56000BD3BA07F7888 /* DayDate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayDate.swift; sourceTree = "<group>"; };
 		FFE37A9AC772D98C3F894A54 /* Fold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fold.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -217,7 +231,14 @@
 		BAEFBFAE0CCD1B9798EF57B9 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				451F9A29BCE525F6F7DB136F /* CaptureScreen.swift */,
+				BAF5D53BDEC7E257748B1BA6 /* LedgerScreen.swift */,
 				E0415B7F4AEE877691FBCA01 /* Placeholders.swift */,
+				99F9D8FCA34376C5975B217F /* ReckoningScreen.swift */,
+				E46B4F640F6CF2E7ACAC5A77 /* ReportScreen.swift */,
+				82829D649A55E9706521D61C /* SettingsScreen.swift */,
+				4696322E2507A42993C31229 /* TodayScreen.swift */,
+				007547F000B84CD93C5C2C54 /* WantsScreen.swift */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -349,6 +370,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				756C77D8A38E0674B6DF22FF /* CaptureScreen.swift in Sources */,
 				1CB785DFA295AAAD533DED51 /* Categories.swift in Sources */,
 				44D63CA6B052D481588D7B26 /* Charts.swift in Sources */,
 				3A2558C471777374B54C3E03 /* Compute.swift in Sources */,
@@ -359,19 +381,25 @@
 				C9106348E23F2C81D9DE645E /* Fold.swift in Sources */,
 				689CB07685953660D9FBE72B /* GitHubStore.swift in Sources */,
 				D1008160DB11D99220B2B809 /* HLC.swift in Sources */,
+				B052E957D0AEF9EC67C27DEE /* LedgerScreen.swift in Sources */,
 				C368EC2654CB23528C85C86F /* Money.swift in Sources */,
 				AF6D2EAAC2E41E73315E197D /* MoneyView.swift in Sources */,
 				69197A9FA8005D805CBFEE7B /* Placeholders.swift in Sources */,
 				0485E3010C25D31ECD240E41 /* Primitives.swift in Sources */,
+				274B5F5EAD2F4FFE84A8BB89 /* ReckoningScreen.swift in Sources */,
+				2EEE1710A0AF6C83FAB78BF5 /* ReportScreen.swift in Sources */,
 				820B8CF3AD6DD73B19209B5A /* RootView.swift in Sources */,
 				1BFA3B514814A66A1A6FA7C0 /* ServerStore.swift in Sources */,
+				DCC8D78EC505286A4ABDC3AC /* SettingsScreen.swift in Sources */,
 				18922A4E88E6B7459695C95F /* Store.swift in Sources */,
 				D803ADA52EAD60F2A078404B /* Strings.swift in Sources */,
 				D4298269F4DB0545C5C437C8 /* SyncEngine.swift in Sources */,
 				2AB6CA3BF8B232F0AC6E9EE9 /* Theme.swift in Sources */,
+				F327E19633188F5CDEBFDD8A /* TodayScreen.swift in Sources */,
 				D67CF4E4F37FE11D80CE533D /* Tokens.swift in Sources */,
 				E2737BDF2E7680C3FA90432A /* Types.swift in Sources */,
 				1F4F46BF844D81AD5E1A361F /* Vault.swift in Sources */,
+				9A4D326CFD1ADB4EBA0A7B4F /* WantsScreen.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
