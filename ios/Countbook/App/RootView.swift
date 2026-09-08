@@ -16,11 +16,26 @@ enum Tab: String, CaseIterable, Identifiable {
     }
 }
 
+extension Tab {
+    /// Lets a screenshot run open straight onto a tab:
+    ///   xcrun simctl launch <udid> com.czy.countbook -startTab report
+    /// Debug only — the shipping app always opens on 今日.
+    static var launchDefault: Tab {
+        #if DEBUG
+        if let raw = UserDefaults.standard.string(forKey: "startTab"),
+           let tab = Tab(rawValue: raw) {
+            return tab
+        }
+        #endif
+        return .today
+    }
+}
+
 struct RootView: View {
     @Environment(Store.self) private var store
     @Environment(SyncEngine.self) private var sync
 
-    @State private var tab: Tab = .today
+    @State private var tab: Tab = Tab.launchDefault
     @State private var capturing = false
     @State private var reckoning = false
     /// The reckoning is offered once per day per launch; a modal that came back
@@ -47,6 +62,7 @@ struct RootView: View {
         screen
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .overlay(alignment: .bottom) { toast }
+            .safeAreaInset(edge: .bottom, spacing: 0) { captureClearance }
             .overlay(alignment: .bottomTrailing) { captureButton }
             .safeAreaInset(edge: .bottom, spacing: 0) { TabBar(tab: $tab) }
             .sheet(isPresented: $capturing) {
@@ -71,18 +87,37 @@ struct RootView: View {
         }
     }
 
-    private var captureButton: some View {
-        Button { capturing = true } label: {
-            Text(S.t(.captureMark))
-                .font(TypeScale.row.font)
-                .foregroundStyle(Ink.accentOn)
-                .frame(width: Space.s9 + Space.s2, height: Space.s9 + Space.s2)
-                .background(Ink.accentInk, in: Circle())
+    /// Logging a purchase is a plausible next action from today and from the
+    /// ledger, and from nowhere else — on 报告, 待购 or 设置 the button is only
+    /// ink sitting over a figure.
+    private var showsCapture: Bool { tab == .today || tab == .ledger }
+
+    /// The button is drawn over the content, so the content is given back the
+    /// height it covers. Without this the last row of a list can never be
+    /// scrolled clear of it, and in a ledger an obscured figure is a fault
+    /// rather than a cosmetic detail.
+    @ViewBuilder
+    private var captureClearance: some View {
+        if showsCapture {
+            Color.clear.frame(height: Space.s9 + Space.s2 + Space.s4 * 2)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(S.t(.captureTitle))
-        .padding(.trailing, Layout.gutter)
-        .padding(.bottom, Space.s4)
+    }
+
+    @ViewBuilder
+    private var captureButton: some View {
+        if showsCapture {
+            Button { capturing = true } label: {
+                Text(S.t(.captureMark))
+                    .font(TypeScale.row.font)
+                    .foregroundStyle(Ink.accentOn)
+                    .frame(width: Space.s9 + Space.s2, height: Space.s9 + Space.s2)
+                    .background(Ink.accentInk, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(S.t(.captureTitle))
+            .padding(.trailing, Layout.gutter)
+            .padding(.bottom, Space.s4)
+        }
     }
 
     @ViewBuilder

@@ -23,7 +23,6 @@
 		44D63CA6B052D481588D7B26 /* Charts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05787AE6557A7131646AA255 /* Charts.swift */; };
 		58D1B52696070598FC200941 /* ComputeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33602B223951782A17B7EB4C /* ComputeTests.swift */; };
 		689CB07685953660D9FBE72B /* GitHubStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F9C049BCCBC6297FAD8A4BC /* GitHubStore.swift */; };
-		69197A9FA8005D805CBFEE7B /* Placeholders.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0415B7F4AEE877691FBCA01 /* Placeholders.swift */; };
 		704FAEF3EC56D6A293EB4635 /* ChartGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C98F747829DB9990B9551FFB /* ChartGeometryTests.swift */; };
 		756C77D8A38E0674B6DF22FF /* CaptureScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 451F9A29BCE525F6F7DB136F /* CaptureScreen.swift */; };
 		79D8BF698DE5FBB8BA403D4C /* GitHubVaultIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7102CCD15A734267FF8CC9 /* GitHubVaultIntegrationTests.swift */; };
@@ -98,7 +97,6 @@
 		CF8D49AFDDA0D11F7AD0DC6B /* FoldTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoldTests.swift; sourceTree = "<group>"; };
 		D80D6A02EB42A9E16A48F69E /* SyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncEngine.swift; sourceTree = "<group>"; };
 		DB432B0F817D76BF8A8603AC /* money.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = money.json; sourceTree = "<group>"; };
-		E0415B7F4AEE877691FBCA01 /* Placeholders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Placeholders.swift; sourceTree = "<group>"; };
 		E082060BBA7080049F97B427 /* Store.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Store.swift; sourceTree = "<group>"; };
 		E46B4F640F6CF2E7ACAC5A77 /* ReportScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportScreen.swift; sourceTree = "<group>"; };
 		ED1EF4F56000BD3BA07F7888 /* DayDate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayDate.swift; sourceTree = "<group>"; };
@@ -233,7 +231,6 @@
 			children = (
 				451F9A29BCE525F6F7DB136F /* CaptureScreen.swift */,
 				BAF5D53BDEC7E257748B1BA6 /* LedgerScreen.swift */,
-				E0415B7F4AEE877691FBCA01 /* Placeholders.swift */,
 				99F9D8FCA34376C5975B217F /* ReckoningScreen.swift */,
 				E46B4F640F6CF2E7ACAC5A77 /* ReportScreen.swift */,
 				82829D649A55E9706521D61C /* SettingsScreen.swift */,
@@ -384,7 +381,6 @@
 				B052E957D0AEF9EC67C27DEE /* LedgerScreen.swift in Sources */,
 				C368EC2654CB23528C85C86F /* Money.swift in Sources */,
 				AF6D2EAAC2E41E73315E197D /* MoneyView.swift in Sources */,
-				69197A9FA8005D805CBFEE7B /* Placeholders.swift in Sources */,
 				0485E3010C25D31ECD240E41 /* Primitives.swift in Sources */,
 				274B5F5EAD2F4FFE84A8BB89 /* ReckoningScreen.swift in Sources */,
 				2EEE1710A0AF6C83FAB78BF5 /* ReportScreen.swift in Sources */,

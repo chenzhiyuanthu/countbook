@@ -271,7 +271,11 @@ struct ReportScreen: View {
             Text(S.t(.reportMonthTitle, ["year": String(month.prefix(4)), "month": String(month.suffix(2))]))
                 .textStyle(.body, ink: Ink.ink900)
                 // Zero-padded and tabular, so stepping through months does not
-                // shift the chevrons under the reader's thumb.
+                // shift the chevrons under the reader's thumb. A minimum rather
+                // than a fixed width, and never wrapped: 2026 年 09 月 is wider
+                // than the minimum and was breaking across two lines.
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .frame(minWidth: Space.s10 + Space.s5)
             ChevronButton(
                 direction: .right,

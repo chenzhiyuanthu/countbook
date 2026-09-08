@@ -56,8 +56,10 @@ private enum Composition {
     static let markTracking: CGFloat = 0.08
     /// The 分, relative to the figure size.
     static let fraction: CGFloat = 0.56
-    /// The fraction's fixed box, in units of its own digit advance, so integer
-    /// digits align down a column whether an amount ends .00 or .40.
+    /// The fraction's minimum box, in units of its own digit advance, so
+    /// integer digits align down a column whether an amount ends .00 or .40.
+    /// A minimum rather than a fixed size: the advance below is nominal, and a
+    /// figure must overflow its box before it is allowed to lose a digit.
     static let fractionBox: CGFloat = 2.6
     /// SF Pro's tabular digit advance, in em.
     static let digitAdvance: CGFloat = 0.6
@@ -106,7 +108,12 @@ struct MoneyView: View {
                     .font(.system(size: point * Composition.fraction, weight: weight).monospacedDigit())
                     .foregroundStyle(fractionInk)
                     .settles(fen, reduced: reduceMotion)
-                    .frame(width: point * Composition.fraction
+                    // The box is a floor, not a ceiling. As a fixed width it
+                    // truncated every row figure to "¥86…": SF Pro's digit
+                    // advance runs wider than 0.6em at row size, and a
+                    // hard-clipped frame ellipsises rather than overflowing.
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(minWidth: point * Composition.fraction
                            * Composition.fractionBox * Composition.digitAdvance,
                            alignment: .leading)
             }

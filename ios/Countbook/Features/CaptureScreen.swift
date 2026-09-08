@@ -301,6 +301,13 @@ struct CaptureScreen: View {
 
     // MARK: - Amount and its consequence
 
+    /// The empty state prints ¥0.00 rather than nothing, so the gutter and the
+    /// caret hold their place from the first frame. DESIGN.md §5.5 sets that
+    /// zero's integer in `--ink-300` — the one case an integer is not ink900 —
+    /// but the tone is chosen inside `MoneyView` from the figure's role and
+    /// there is no call-site door into it. Widening that API for one placeholder
+    /// would open the door every other screen must not walk through, so the
+    /// zero sets in ink900 and the divergence is recorded here.
     private var amountRow: some View {
         HStack(alignment: .firstTextBaseline, spacing: Space.s1) {
             Spacer(minLength: 0)
@@ -454,7 +461,7 @@ struct CaptureScreen: View {
     private func keyView(_ key: Key, height: CGFloat, figure: CGFloat) -> some View {
         switch key {
         case .digit(let d):
-            keyButton(height: height, label: S.t(.captureAmount) + " " + d) {
+            keyButton(height: height, label: d) {
                 press { pressDigit(d) }
             } content: {
                 Text(d)
@@ -541,7 +548,7 @@ struct CaptureScreen: View {
             .padding(.horizontal, Space.s4)
         }
         .buttonStyle(HeldBarStyle())
-        .accessibilityLabel(S.t(.captureSuspendHint, ["days": cooling]))
+        .accessibilityHint(S.t(.captureSuspendHint, ["days": cooling]))
     }
 
     /// The escape hatch must exist and must be second class.
@@ -563,13 +570,15 @@ struct CaptureScreen: View {
         PrimaryButton(
             warning.map { S.t(.captureSaveWarned, ["warning": $0]) } ?? S.t(.captureSave),
             holdMs: needsHold ? Rules.holdToSaveMs : nil,
-            disabled: missing,
-            accessibilityLabel: needsHold ? S.t(.captureHoldHint) : nil
+            disabled: missing
         ) {
             if longPressed { longPressed = false; return }
             save(keep: keepOpen)
         }
-        .accessibilityHint(hint)
+        // The label is the bar's own words; what is missing, or that this one
+        // has to be held, is a hint — a name that changes under you is worse
+        // than no name at all.
+        .accessibilityHint(needsHold && !missing ? S.t(.captureHoldHint) : hint)
         // AC-1.6 — a long press saves and keeps the sheet open. It is offered
         // only when the 3-second ring is not: above the cooling floor the press
         // and hold already means something else, and one gesture may not mean
@@ -742,7 +751,7 @@ struct CaptureScreen: View {
         )
         let eventID = store.commit(.entryAdd(entry: entry))
         store.toast(S.t(.captureSaved),
-                    ToastAction(label: S.t(.ledgerUndo)) { store.undo(eventID: eventID) })
+                    action: ToastAction(label: S.t(.ledgerUndo)) { store.undo(eventID: eventID) })
         guard keep else {
             onClose()
             return
@@ -773,7 +782,7 @@ struct CaptureScreen: View {
             unlockAt: at + cooling * msPerDay
         )))
         store.toast(S.t(.captureSuspended),
-                    ToastAction(label: S.t(.ledgerUndo)) { store.undo(eventID: eventID) })
+                    action: ToastAction(label: S.t(.ledgerUndo)) { store.undo(eventID: eventID) })
         onClose()
     }
 
