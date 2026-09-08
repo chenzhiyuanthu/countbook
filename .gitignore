@@ -17,3 +17,6 @@ coverage/
 
 # Credentials for the live sync integration tests; never committed.
 .integration.json
+
+# Archive and .ipa output.
+/build/
