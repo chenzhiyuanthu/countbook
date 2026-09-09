@@ -68,15 +68,28 @@ if [[ "$MODE" == "standalone" ]]; then
   "${SSH[@]}" "$TARGET" "cd ${REMOTE_DIR} && sudo docker compose --profile edge up -d --build 2>&1 | tail -20"
 else
   "${SSH[@]}" "$TARGET" "cd ${REMOTE_DIR} && sudo docker compose up -d --build 2>&1 | tail -20"
-  # Wire the existing edge Caddy to this app and give it the site block.
+  # Wire the existing edge Caddy to this app and give it the site block,
+  # end to end: find the Caddy that owns :443, put it on the app's network,
+  # append a countbook block to whatever Caddyfile it actually mounts, and
+  # restart it. The block serves the sslip.io host (valid TLS with no DNS
+  # record) plus $DOMAIN for later. www.* and every other existing site are
+  # untouched.
+  SSLIP="$(echo "$SSH_HOST" | tr '.' '-').sslip.io"
   "${SSH[@]}" "$TARGET" "
+    set -e
     EDGE=\$(sudo docker ps --filter 'publish=443' --format '{{.Names}}' | head -1)
-    if [ -n \"\$EDGE\" ]; then
-      sudo docker network connect countbook-edge \"\$EDGE\" 2>/dev/null || true
-      echo \"  attached \$EDGE to countbook-edge\"
-      echo '  --- add this to that stack'\''s Caddyfile, then restart it ---'
-      cat ${REMOTE_DIR}/caddy/countbook.caddy
+    [ -z \"\$EDGE\" ] && { echo '  no edge Caddy found on :443'; exit 1; }
+    CF=\$(sudo docker inspect \"\$EDGE\" --format '{{range .Mounts}}{{if eq .Destination \"/etc/caddy/Caddyfile\"}}{{.Source}}{{end}}{{end}}')
+    sudo docker network connect countbook-edge \"\$EDGE\" 2>/dev/null || true
+    if sudo grep -q 'countbook:8080' \"\$CF\"; then
+      echo \"  countbook block already in \$CF\"
+    else
+      sudo cp \"\$CF\" \"\$CF.bak-\$(date +%Y%m%d%H%M%S)\"
+      printf '\n${SSLIP}, ${DOMAIN} {\n\tencode zstd gzip\n\theader {\n\t\tStrict-Transport-Security \"max-age=31536000; includeSubDomains\"\n\t\tX-Content-Type-Options \"nosniff\"\n\t\t-Server\n\t}\n\treverse_proxy countbook:8080 {\n\t\theader_up X-Forwarded-Proto {scheme}\n\t}\n}\n' | sudo tee -a \"\$CF\" >/dev/null
+      echo \"  appended countbook block to \$CF\"
     fi
+    sudo docker exec \"\$EDGE\" caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1 || { echo '  Caddyfile invalid, not restarting'; exit 1; }
+    sudo docker restart \"\$EDGE\" >/dev/null && echo \"  restarted \$EDGE\"
   "
 fi
 

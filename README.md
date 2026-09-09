@@ -17,7 +17,7 @@
 |---|---|
 | **网页版** | <https://chenzhiyuanthu.github.io/countbook/> — PWA，可安装，离线可用 |
 | **iOS** | 原生 SwiftUI，零第三方包。`./scripts/ios-ipa.sh` 出一个已签名的 .ipa，装进已注册的设备；或 `open ios/Countbook.xcodeproj` 直接跑 |
-| **多端同步** | 端到端加密。GitHub 私有仓库（无需服务器）或自建服务器 |
+| **多端同步** | 已部署在 `43.162.121.196`，端到端加密。打开设置就是「自建服务器 · 登录」，输邮箱密码即可。也可切到 GitHub 私有仓库 |
 
 ---
 
@@ -106,15 +106,22 @@ COUNTBOOK_GH_TOKEN=$(gh auth token) COUNTBOOK_GH_REPO=chenzhiyuanthu/countbook-v
 
 网页版推到 `main` 分支即自动部署到 GitHub Pages（`.github/workflows/pages.yml`）。
 
-自建同步服务：
+自建同步服务（已经部署好了，这段是给重装或换机用的）：
 
 ```bash
-SSHPASS='...' ./server/deploy.sh                       # 默认 43.162.121.196
+./server/deploy.sh                                    # 默认 ubuntu@43.162.121.196
 SSH_HOST=1.2.3.4 DOMAIN=count.example ./server/deploy.sh
 ```
 
-脚本会自己判断这台机器上是否已经有别的 Caddy 占着 80/443：有就把 app 挂到同一个 docker
-网络并打印要粘贴的站点块，没有就带上自己的 Caddy 一起起来。
+脚本会自己判断这台机器上是否已经有别的 Caddy 占着 80/443：有就把 app 挂进同一个 docker
+网络、把 `<ip>.sslip.io`（和你给的 `DOMAIN`）的站点块追加进那个 Caddy 的配置并重启它 ——
+现有的 `www.czylsy911.art` 不受影响；没有别的 Caddy 就带上自己的一起起来。
+
+`<ip>.sslip.io` 这个域名由 sslip.io 的公共 DNS 直接解析到服务器 IP，所以 Let's Encrypt
+能直接签证书，**不用改任何 DNS 记录**。想要更好看的名字，把 `count.czylsy911.art` 的 A
+记录指到同一个 IP 即可，两个都能用。
+
+第一个账号免注册码；之后再开账号要 `/opt/countbook/.env` 里的 `SIGNUP_CODE`。
 
 ## 明确的非目标
 
