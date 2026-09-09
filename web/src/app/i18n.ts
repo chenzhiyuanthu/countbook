@@ -334,6 +334,7 @@ export const STRINGS = {
   'sync.code': ['注册码', 'Signup code'],
   'sync.login': ['登录', 'Log in'],
   'sync.signup': ['注册', 'Sign up'],
+  'sync.serverKeyHint': ['同一个密码用来登录，也用来给数据加密。密码不会被保存，只在这台设备上派生出密钥。', 'The one password both logs you in and encrypts your data. It is never stored; the key is derived on this device.'],
   'sync.serverUrl': ['服务器地址', 'Server address'],
 
   'standard.perMonth': ['每月', 'a month'],

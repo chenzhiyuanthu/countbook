@@ -18,6 +18,12 @@ private let minPassphrase = 8
 /// `proposeStandard` needs a 30-day span inside its 90-day window.
 private let proposalDays = 30
 private let defaultBranch = "main"
+
+/// The sync server this build points at by default, so signing in is just an
+/// email and a password. sslip.io resolves the dotted-IP name to the box, so a
+/// real certificate is issued with no DNS record to create. Mirrors
+/// web/src/sync/config.ts.
+private let defaultServerURL = "https://43-162-121-196.sslip.io"
 /// SCREENS.md B8: the save receipt is a line that stands for three seconds.
 private let savedNote = Duration.seconds(3)
 
@@ -962,15 +968,15 @@ private struct PassphrasePair: View {
 }
 
 private struct ConnectForms: View {
-    @State private var kind = VaultStoreKind.github
+    @State private var kind = VaultStoreKind.server
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s4) {
             Text(S.t(.syncChoose)).textStyle(.label)
             SegmentedStamp(
                 options: [
-                    .init(value: VaultStoreKind.github, label: S.t(.syncGithub)),
                     .init(value: VaultStoreKind.server, label: S.t(.syncServer)),
+                    .init(value: VaultStoreKind.github, label: S.t(.syncGithub)),
                 ],
                 selection: kind,
                 accessibilityLabel: S.t(.syncChoose)
@@ -1063,12 +1069,10 @@ private struct ServerForm: View {
     @Environment(SyncEngine.self) private var sync
 
     @State private var mode = Mode.login
-    @State private var url = ""
+    @State private var url = defaultServerURL
     @State private var email = ""
     @State private var password = ""
     @State private var code = ""
-    @State private var passphrase = ""
-    @State private var again = ""
     @State private var busy = false
     @State private var error = ""
 
@@ -1098,7 +1102,9 @@ private struct ServerForm: View {
             if mode == .signup {
                 LabelledField(label: S.t(.syncCode), text: $code, mono: true)
             }
-            PassphrasePair(passphrase: $passphrase, again: $again)
+            Text(S.t(.syncServerKeyHint))
+                .textStyle(.body, ink: Ink.ink500)
+                .fixedSize(horizontal: false, vertical: true)
             if !error.isEmpty { ErrorNote(message: error) }
             PrimaryButton(
                 busy ? S.t(.syncConnecting) : (mode == .signup ? S.t(.syncSignup) : S.t(.syncLogin)),
@@ -1109,12 +1115,13 @@ private struct ServerForm: View {
         }
     }
 
+    // One secret: the account password authenticates and also derives the vault
+    // key. See the note in the web ServerForm — a stolen database is ciphertext
+    // plus a scrypt hash, and on a personal server the operator is you.
     private var ready: Bool {
         !url.trimmingCharacters(in: .whitespaces).isEmpty
             && !email.trimmingCharacters(in: .whitespaces).isEmpty
-            && !password.isEmpty
-            && passphrase.count >= minPassphrase
-            && passphrase == again
+            && (mode == .signup ? password.count >= minPassphrase : !password.isEmpty)
     }
 
     private func submit() {
@@ -1128,7 +1135,7 @@ private struct ServerForm: View {
         let mode = mode
         let password = password
         let code = code.trimmingCharacters(in: .whitespaces)
-        let passphrase = passphrase
+        let passphrase = password
         Task {
             do {
                 // Logging in and unlocking the vault are two steps of one act,

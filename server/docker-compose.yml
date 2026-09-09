@@ -56,7 +56,9 @@ volumes:
   caddy_config:
 
 networks:
-  # An external network so an already-running Caddy from another stack can reach
-  # this app by name. deploy.sh creates it if it does not exist.
+  # An already-running Caddy from another stack reaches this app by name over
+  # this network. It is created before `up` (by deploy.sh, or by hand), so
+  # compose treats it as external rather than trying to own it.
   edge:
     name: countbook-edge
+    external: true

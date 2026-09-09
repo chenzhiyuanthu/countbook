@@ -320,6 +320,7 @@ enum StringKey: String, CaseIterable, Sendable {
     case syncLogin = "sync.login"
     case syncSignup = "sync.signup"
     case syncServerUrl = "sync.serverUrl"
+    case syncServerKeyHint = "sync.serverKeyHint"
     case standardPerMonth = "standard.perMonth"
     case standardPerEntry = "standard.perEntry"
     case standardUnset = "standard.unset"
@@ -727,6 +728,7 @@ enum S {
         case .syncLogin: return ("登录", "Log in")
         case .syncSignup: return ("注册", "Sign up")
         case .syncServerUrl: return ("服务器地址", "Server address")
+        case .syncServerKeyHint: return ("同一个密码用来登录，也用来给数据加密。密码不会被保存，只在这台设备上派生出密钥。", "The one password both logs you in and encrypts your data. It is never stored; the key is derived on this device.")
         case .standardPerMonth: return ("每月", "a month")
         case .standardPerEntry: return ("每月", "a month")
         case .standardUnset: return ("未设", "Not set")

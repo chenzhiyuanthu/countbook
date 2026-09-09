@@ -13,6 +13,7 @@ import type { Fen } from '../core/money'
 import type { Category, Settings as SettingsShape } from '../core/types'
 import { TOKEN_URL } from '../sync/github'
 import { listDevices, login, revokeDevice, signup } from '../sync/server'
+import { DEFAULT_SERVER_URL } from '../sync/config'
 import type { DeviceRow, ServerConfig } from '../sync/server'
 import { Button, Field, Label, Rule, Segmented, Stepper } from '../ui/primitives'
 import { Money } from '../ui/Money'
@@ -714,7 +715,7 @@ function PassphrasePair({
 
 function ConnectForms() {
   const { t } = useStore()
-  const [kind, setKind] = useState<'github' | 'server'>('github')
+  const [kind, setKind] = useState<'github' | 'server'>('server')
   return (
     <div className="settings__block">
       <Label>{t('sync.choose')}</Label>
@@ -723,8 +724,8 @@ function ConnectForms() {
         value={kind}
         onChange={setKind}
         options={[
-          { value: 'github', label: t('sync.github') },
           { value: 'server', label: t('sync.server') },
+          { value: 'github', label: t('sync.github') },
         ]}
       />
       {kind === 'github' ? <GitHubForm /> : <ServerForm />}
@@ -785,18 +786,24 @@ function ServerForm() {
   const { t } = useStore()
   const { connectServer } = useSync()
   const [mode, setMode] = useState<'login' | 'signup'>('login')
-  const [url, setUrl] = useState('')
+  const [url, setUrl] = useState(DEFAULT_SERVER_URL)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
-  const [pass, setPass] = useState('')
-  const [again, setAgain] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
+  // One secret, not two. The account password authenticates to the server and
+  // also derives the vault key, so there is a single thing to remember. Because
+  // the server necessarily receives the password to verify it, the operator of
+  // the box could in principle derive the key — on a personal single-tenant
+  // server that operator is you. What it does buy is that a stolen database is
+  // ciphertext plus a scrypt hash, not a readable ledger. Signup needs 8+ for
+  // that reason; login trusts whatever the account already has.
   const ready =
-    url.trim().length > 0 && email.trim().length > 0 && password.length > 0 &&
-    pass.length >= MIN_PASSPHRASE && pass === again
+    url.trim().length > 0 &&
+    email.trim().length > 0 &&
+    (mode === 'signup' ? password.length >= MIN_PASSPHRASE : password.length > 0)
 
   const submit = () => {
     setBusy(true)
@@ -808,7 +815,7 @@ function ServerForm() {
         ? signup(base, account, password, code.trim(), thisDeviceId(), thisDeviceLabel())
         : login(base, account, password, thisDeviceId(), thisDeviceLabel())
     auth
-      .then((session) => connectServer({ baseUrl: base, token: session.token, email: account }, pass, true))
+      .then((session) => connectServer({ baseUrl: base, token: session.token, email: account }, password, true))
       .catch((e: unknown) => setError(reason(e)))
       .finally(() => setBusy(false))
   }
@@ -829,7 +836,7 @@ function ServerForm() {
       <Field label={t('sync.email')} value={email} onChange={setEmail} mono />
       <Field label={t('sync.password')} value={password} onChange={setPassword} type="password" />
       {mode === 'signup' ? <Field label={t('sync.code')} value={code} onChange={setCode} mono /> : null}
-      <PassphrasePair pass={pass} again={again} onPass={setPass} onAgain={setAgain} />
+      <p className="t-body ink-500">{t('sync.serverKeyHint')}</p>
       {error ? <p className="t-body ink-700">{error}</p> : null}
       <div className="settings__actions">
         <Button variant="primary" fullWidth onClick={submit} disabled={busy || !ready}>
