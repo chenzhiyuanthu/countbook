@@ -20,6 +20,7 @@ services:
     environment:
       PORT: 8080
       DATA_DIR: /data
+      PUBLIC_DIR: /app/public
       # Set in .env on the host. With no value the server refuses to start
       # rather than signing sessions with a guessable key.
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET must be set}
@@ -29,6 +30,10 @@ services:
       SIGNUP_CODE: ${SIGNUP_CODE:-}
     volumes:
       - ./data:/data
+      # The built web app, served by the app itself so one origin delivers both
+      # the page and its API. Shipped by deploy.sh; a web-only change is just a
+      # re-upload and needs no image rebuild.
+      - ./web:/app/public:ro
     networks:
       - default
       - edge

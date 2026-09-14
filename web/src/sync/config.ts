@@ -8,4 +8,4 @@
  * a nicer name (count.czylsy911.art) is later pointed at the same box, either
  * works — the certificate covers both.
  */
-export const DEFAULT_SERVER_URL = 'https://43-162-121-196.sslip.io'
+export const DEFAULT_SERVER_URL = 'https://countbook.chenzhiyuanthu.com'

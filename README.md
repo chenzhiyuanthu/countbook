@@ -15,9 +15,9 @@
 
 | | |
 |---|---|
-| **网页版** | <https://chenzhiyuanthu.github.io/countbook/> — PWA，可安装，离线可用 |
+| **网页版** | <https://countbook.chenzhiyuanthu.com>（自己的服务器，国内直连）；备用 <https://chenzhiyuanthu.github.io/countbook/>。PWA，可安装，离线可用 |
 | **iOS** | 原生 SwiftUI，零第三方包。`./scripts/ios-ipa.sh` 出一个已签名的 .ipa，装进已注册的设备；或 `open ios/Countbook.xcodeproj` 直接跑 |
-| **多端同步** | 已部署在 `43.162.121.196`，端到端加密。打开设置就是「自建服务器 · 登录」，输邮箱密码即可。也可切到 GitHub 私有仓库 |
+| **多端同步** | 网页和 API 同源部署在 `43.162.121.196`（`countbook.chenzhiyuanthu.com`），端到端加密。打开设置就是「自建服务器 · 登录」，输邮箱密码即可。也可切到 GitHub 私有仓库 |
 
 ---
 

@@ -23,7 +23,7 @@ private let defaultBranch = "main"
 /// email and a password. sslip.io resolves the dotted-IP name to the box, so a
 /// real certificate is issued with no DNS record to create. Mirrors
 /// web/src/sync/config.ts.
-private let defaultServerURL = "https://43-162-121-196.sslip.io"
+private let defaultServerURL = "https://countbook.chenzhiyuanthu.com"
 /// SCREENS.md B8: the save receipt is a line that stands for three seconds.
 private let savedNote = Duration.seconds(3)
 

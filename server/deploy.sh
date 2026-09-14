@@ -12,7 +12,7 @@ set -euo pipefail
 SSH_USER="${SSH_USER:-ubuntu}"
 SSH_HOST="${SSH_HOST:-43.162.121.196}"
 REMOTE_DIR="${REMOTE_DIR:-/opt/countbook}"
-DOMAIN="${DOMAIN:-count.czylsy911.art}"
+DOMAIN="${DOMAIN:-countbook.chenzhiyuanthu.com}"
 ORIGINS="${ALLOWED_ORIGINS:-https://chenzhiyuanthu.github.io}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -31,11 +31,18 @@ say() { printf '\n\033[1;33m▸ %s\033[0m\n' "$*"; }
 say "1/6  Server check"
 "${SSH[@]}" "$TARGET" 'echo "  $(hostname) · $(. /etc/os-release; echo $PRETTY_NAME)"; echo "  docker: $(sudo docker --version 2>/dev/null || echo MISSING)"'
 
-say "2/6  Uploading source to ${REMOTE_DIR}"
+say "2/6  Building the web app and uploading everything to ${REMOTE_DIR}"
 "${SSH[@]}" "$TARGET" "sudo mkdir -p ${REMOTE_DIR} && sudo chown -R ${SSH_USER}:${SSH_USER} ${REMOTE_DIR}"
+# The app is served from its own domain root, so it is built with base '/'. The
+# server serves it, so one origin delivers both the page and the API.
+( cd "$HERE/../web" && COUNTBOOK_BASE=/ npm run build >/dev/null 2>&1 ) || { echo "  web build failed"; exit 1; }
+export COPYFILE_DISABLE=1   # keep macOS ._ files out of the tarball
 tar czf - -C "$HERE" package.json server.js Dockerfile docker-compose.yml caddy \
   | "${SSH[@]}" "$TARGET" "tar xzf - -C ${REMOTE_DIR}"
-echo "  uploaded"
+"${SSH[@]}" "$TARGET" "rm -rf ${REMOTE_DIR}/web && mkdir -p ${REMOTE_DIR}/web"
+tar czf - -C "$HERE/../web/dist" . \
+  | "${SSH[@]}" "$TARGET" "tar xzf - -C ${REMOTE_DIR}/web && find ${REMOTE_DIR}/web -name '._*' -delete"
+echo "  uploaded server + web build"
 
 say "3/6  Secrets and data directory"
 # The container runs as uid 1000 (`node`); Docker would otherwise create the

@@ -25,6 +25,9 @@ const { DatabaseSync } = require('node:sqlite')
 
 const PORT = Number(process.env.PORT || 8080)
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data')
+// When set to a directory, the built web app is served from it, so one origin
+// delivers both the page and its API and no CORS applies to the app itself.
+const PUBLIC_DIR = process.env.PUBLIC_DIR || ''
 const SESSION_SECRET = process.env.SESSION_SECRET || ''
 const SIGNUP_CODE = process.env.SIGNUP_CODE || ''
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
@@ -356,6 +359,57 @@ function issueToken(userId, device, label) {
 
 /* ── server ──────────────────────────────────────────────────────────── */
 
+/* ── static web app ──────────────────────────────────────────────────── */
+
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.webmanifest': 'application/manifest+json',
+  '.woff2': 'font/woff2',
+  '.ico': 'image/x-icon',
+  '.txt': 'text/plain; charset=utf-8',
+}
+
+/**
+ * Serve the built single-page app. Hashed assets are immutable and cached for a
+ * year; everything else, index.html included, is revalidated so a deploy is
+ * picked up on the next load. A path that matches no file falls back to
+ * index.html, because the app is client-rendered and a deep link is not a file.
+ */
+function serveStatic(req, res, pathname) {
+  if (!PUBLIC_DIR) return send(res, 404, { error: 'not_found' })
+
+  const clean = decodeURIComponent(pathname).replace(/\0/g, '')
+  let rel = clean === '/' ? 'index.html' : clean.replace(/^\/+/, '')
+  let file = path.join(PUBLIC_DIR, rel)
+
+  // Never escape the public root, whatever the request contains.
+  if (!file.startsWith(PUBLIC_DIR + path.sep) && file !== PUBLIC_DIR) {
+    return send(res, 403, { error: 'forbidden' })
+  }
+
+  fs.stat(file, (err, st) => {
+    if (err || !st.isFile()) {
+      // SPA fallback for a navigation; a missing asset stays a 404.
+      const accepts = (req.headers.accept || '').includes('text/html')
+      if (!accepts) return send(res, 404, { error: 'not_found' })
+      file = path.join(PUBLIC_DIR, 'index.html')
+    }
+    const ext = path.extname(file).toLowerCase()
+    const immutable = /\/assets\//.test(file) || /\.[0-9a-f]{8,}\./i.test(file)
+    res.writeHead(200, {
+      'content-type': MIME[ext] || 'application/octet-stream',
+      'cache-control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache',
+      'x-content-type-options': 'nosniff',
+    })
+    fs.createReadStream(file).on('error', () => { if (!res.headersSent) send(res, 500, { error: 'internal' }) }).pipe(res)
+  })
+}
+
 const server = http.createServer(async (req, res) => {
   const allowed = cors(req, res)
   if (req.method === 'OPTIONS') {
@@ -367,7 +421,13 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost')
   const key = `${req.method} ${url.pathname}`
   const handler = routes[key]
-  if (!handler) return send(res, 404, { error: 'not_found' })
+  if (!handler) {
+    // Anything that is not an API route and is a plain GET is the web app.
+    if (req.method === 'GET' && !url.pathname.startsWith('/api/')) {
+      return serveStatic(req, res, url.pathname)
+    }
+    return send(res, 404, { error: 'not_found' })
+  }
 
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || '?'
 
@@ -384,7 +444,7 @@ const server = http.createServer(async (req, res) => {
 setInterval(() => q.purgeExpired.run(now()), 3600_000).unref()
 
 server.listen(PORT, () => {
-  console.log(`countbook-server on :${PORT}  data=${DATA_DIR}  origins=${ALLOWED_ORIGINS.join(',') || '(none)'}`)
+  console.log(`countbook-server on :${PORT}  data=${DATA_DIR}  web=${PUBLIC_DIR || '(none)'}  origins=${ALLOWED_ORIGINS.join(',') || '(none)'}`)
 })
 
 process.on('SIGTERM', () => server.close(() => { db.close(); process.exit(0) }))
