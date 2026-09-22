@@ -45,7 +45,7 @@
 }
 
 .tabbar__mark { color: var(--c-ink300); }
-.tabbar__mark--heavy { color: var(--c-ink900); }
+.tabbar__mark--heavy { color: var(--c-indigo); }
 
 .tabbar__label {
   color: var(--c-ink500);
@@ -54,7 +54,7 @@
 }
 
 .tabbar__label--heavy {
-  color: var(--c-ink900);
+  color: var(--c-indigo);
   font-weight: 600;
 }
 
@@ -63,7 +63,7 @@
   top: 0;
   left: 0;
   height: calc(var(--l-hairline) * 2);
-  background: var(--c-ink900);
+  background: var(--c-indigo);
   transition:
     transform var(--d-stamp-slide) var(--ease),
     width var(--d-stamp-slide) var(--ease);

@@ -5,7 +5,8 @@
 .money {
   /* No figure-only family token is generated yet; --f-sans is the nearest, and
      the tabular features below keep a column of amounts aligned either way. */
-  font-family: var(--f-sans);
+  /* A ledger's numbers: the serif that is already on the device (tokens.css). */
+  font-family: var(--f-figure);
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: 'tnum' 1, 'lnum' 1;
   font-variant-ligatures: none;

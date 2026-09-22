@@ -41,11 +41,29 @@ struct TodayScreen: View {
 
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                hero(model)
+                // The cover of the ledger: the one block of colour on the screen,
+                // and the figure it exists for. Provenance stays on it — it is
+                // the figure's own derivation — and everything below is paper.
+                VStack(alignment: .leading, spacing: 0) {
+                    hero(model)
+                    if model.hasStandard {
+                        provenance(model)
+                        if derivation { derivationList(model) }
+                    }
+                }
+                .padding(.top, Space.s6)
+                .padding(.bottom, Space.s4)
+                .padding(.horizontal, Layout.gutter)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Ink.indigoGround)
+                .clipShape(UnevenRoundedRectangle(
+                    topLeadingRadius: 0, bottomLeadingRadius: Radius.sheet,
+                    bottomTrailingRadius: Radius.sheet, topTrailingRadius: 0, style: .continuous
+                ))
+                .padding(.horizontal, -Layout.gutter)
+                .padding(.bottom, Space.s4)
                 RuleView(broken: model.over)
                 if model.hasStandard {
-                    provenance(model)
-                    if derivation { derivationList(model) }
                     if model.over, model.figure.recoveryDays > 0 {
                         Text(S.t(.todayRecovery, ["days": model.figure.recoveryDays]))
                             .textStyle(.body, ink: Ink.ink500)
@@ -106,16 +124,16 @@ struct TodayScreen: View {
     /// layout state on first paint, never animated.
     private func hero(_ model: TodayModel) -> some View {
         VStack(alignment: .leading, spacing: Space.s2) {
-            Text(S.t(.todayAvailable)).textStyle(.label)
+            Text(S.t(.todayAvailable)).textStyle(.label, ink: Ink.onIndigoMuted)
             if model.hasStandard {
-                MoneyView(fen: model.figure.perDay, size: .hero, tone: model.over ? .over : nil)
+                MoneyView(fen: model.figure.perDay, size: .hero, tone: model.over ? .overOnIndigo : .onIndigo)
             } else {
                 // Nothing is known yet, so nothing is asserted.
-                Text(verbatim: "——").textStyle(.hero, ink: Ink.ink300)
+                Text(verbatim: "——").textStyle(.hero, ink: Ink.onIndigoMuted)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.bottom, Space.s4)
+        .padding(.bottom, Space.s3)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(S.t(.todayAvailable))
         .accessibilityValue(model.hasStandard
@@ -138,11 +156,11 @@ struct TodayScreen: View {
                     "fixed": format(model.figure.fixedRemaining, currency: model.currency),
                     "days": model.figure.daysLeft,
                 ]))
-                .textStyle(.label)
+                .textStyle(.label, ink: Ink.onIndigoMuted)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                ChevronMark(direction: derivation ? .up : .down)
+                ChevronMark(direction: derivation ? .up : .down, ink: Ink.onIndigoMuted)
             }
             .padding(.vertical, Space.s3)
             .frame(minHeight: Layout.hitTarget)
@@ -155,26 +173,28 @@ struct TodayScreen: View {
     private func derivationList(_ model: TodayModel) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             detail(S.t(.todayDetailStandard)) {
-                MoneyView(fen: model.figure.standard, currency: model.currency)
+                MoneyView(fen: model.figure.standard, tone: .onIndigo, currency: model.currency)
             }
             detail(S.t(.todayDetailSpent)) {
-                MoneyView(fen: model.figure.spent, currency: model.currency)
+                MoneyView(fen: model.figure.spent, tone: .onIndigo, currency: model.currency)
             }
             detail(S.t(.todayDetailFixed)) {
-                MoneyView(fen: model.figure.fixedRemaining, currency: model.currency)
+                MoneyView(fen: model.figure.fixedRemaining, tone: .onIndigo, currency: model.currency)
             }
             detail(S.t(.todayDetailDays)) {
                 Text(S.t(.todayDaysValue, ["n": model.figure.daysLeft]))
-                    .textStyle(.row)
+                    .textStyle(.row, ink: Ink.onIndigo)
             }
         }
+        .padding(.top, Space.s3)
+        .overlay(alignment: .top) { Ink.onIndigoMuted.frame(height: Layout.hairline) }
         .padding(.bottom, Space.s3)
         .transition(.opacity)
     }
 
     private func detail<Value: View>(_ label: String, @ViewBuilder value: () -> Value) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: Space.s3) {
-            Text(label).textStyle(.label)
+            Text(label).textStyle(.label, ink: Ink.onIndigoMuted)
             Spacer(minLength: Space.s3)
             value().frame(minWidth: Theme.amountGutter, alignment: .trailing)
         }
@@ -531,11 +551,12 @@ private struct ChevronShape: Shape {
 /// either: the row it sits in is the accessible element.
 private struct ChevronMark: View {
     let direction: ChevronShape.Direction
+    var ink: Color = Ink.ink300
 
     var body: some View {
         ChevronShape(direction: direction)
             .stroke(style: StrokeStyle(lineWidth: iconStroke, lineCap: .butt, lineJoin: .miter))
-            .foregroundStyle(Ink.ink300)
+            .foregroundStyle(ink)
             .frame(width: Space.s5, height: Space.s5)
             .accessibilityHidden(true)
     }

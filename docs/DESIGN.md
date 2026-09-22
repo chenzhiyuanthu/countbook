@@ -63,6 +63,37 @@ The generator emits a header banner `// GENERATED FROM tokens/*.json — DO NOT 
 
 ## 2. Colour
 
+> **Revision 2026-09 — 靛与朱.** After a year the paper-and-ink scheme read as
+> austere to the point of sameness, and the owner asked for a colour. The
+> answer keeps every rule in this section and adds one structural hue and one
+> object. The generated token file (`design/tokens.json`) is authoritative for
+> every hex below; where a table here still prints the 2025 value, the token wins.
+>
+> - **Grounds warmed to 宣纸**: paper `#F4EFE3`, surface `#FAF7EF`, sunken
+>   `#ECE6D8`; ink warmed to match (`ink-900 #1D1B17`).
+> - **靛青 `--indigo` (`#223F63` / `#7A97BD`) is structure**: the selection
+>   rule under a stamp and under the active tab, the chosen category's frame,
+>   the standard line and its readout on the month strip, the active tab word
+>   and mark. It replaces `ink-900` in every one of those places and nowhere
+>   else. `--bar` (`#A9B6C8` / `#3E4E63`) is a day under the line on the strip.
+> - **The cover**: on 今日, the hero and its provenance sit on `--indigo-ground`
+>   (`#223F63` / `#1B2E47`), full bleed with the bottom corners turned at
+>   `--r-sheet`. Text on it uses `--on-indigo` / `--on-indigo-muted`; a negative
+>   allowance uses `--over-on-indigo` (`#F1B9A9`). It is the only block of
+>   colour on any screen.
+> - **朱砂 replaces red oxide**: `--fig-over` is `#B7352B` / `#E2614F`. Its
+>   three uses stand, and it gains two objects that were ink before: the
+>   必/想/冲 stamps, now drawn as a 20 × 20 cinnabar seal (hairline frame,
+>   the character inside, opacity .55 / .85 / 1 and a double-weight frame for
+>   冲 — still a value ramp, in one hue), and the 记 button's fill
+>   (`--accent-ink`). Red is still never an error, never 后悔.
+> - **青绿 `--fig-spared`** is `#2C6E4F` / `#6FBE9A`; it is also the colour of
+>   a gain and of a confirmed sync.
+> - **Figures set in the serif** (`--f-figure`: New York on Apple, a Song face
+>   elsewhere) at every `Money` size; the hero, screen and section weights
+>   move from 300 to 400 because the serif has no light. Body, labels and
+>   controls stay in the sans.
+
 ### 2.1 Rules that govern the whole palette
 
 - **R1 — Three chromatic roles, no fourth.** `fig-over`, `fig-held`, `fig-spared`. A fourth hue MUST NOT be introduced for any reason, including error, success, brand, or category identity.

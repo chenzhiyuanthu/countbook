@@ -223,8 +223,8 @@
   color: var(--c-ink700);
 }
 .capture__cat[aria-checked='true'] {
-  border-color: var(--c-ink900);
-  color: var(--c-ink900);
+  border-color: var(--c-indigo);
+  color: var(--c-indigo);
   font-weight: 500;
 }
 

@@ -328,7 +328,7 @@ struct MonthStripView: View {
                 ctx.stroke(vertical(x, size.height), with: .color(Ink.ruleStrong), lineWidth: Layout.hairline)
             }
             for g in geo where g.underH > 0 {
-                ctx.fill(Path(rect(g.x, g.w, g.underY, g.underH, size, scale)), with: .color(Ink.ink700))
+                ctx.fill(Path(rect(g.x, g.w, g.underY, g.underH, size, scale)), with: .color(Ink.bar))
             }
             for g in geo where g.overH > 0 {
                 fillOver(&ctx, rect(g.x, g.w, g.overY, g.overH, size, scale))
@@ -338,7 +338,8 @@ struct MonthStripView: View {
                 var line = Path()
                 line.move(to: CGPoint(x: 0, y: y))
                 line.addLine(to: CGPoint(x: size.width, y: y))
-                ctx.stroke(line, with: .color(Ink.ruleStrong), lineWidth: Layout.hairline)
+                // The standard line is structure, so it takes the structure colour.
+                ctx.stroke(line, with: .color(Ink.indigo), lineWidth: Layout.hairline)
             }
             if let active, active < geo.count {
                 let g = geo[active]
@@ -353,7 +354,7 @@ struct MonthStripView: View {
                 Text(S.t(.chartStandardPerDay, ["amount": formatYuan(data.dailyStandard)]))
                     .font(TypeScale.micro.font)
                     .kerning(TypeScale.micro.kerning)
-                    .foregroundStyle(Ink.ink500)
+                    .foregroundStyle(Ink.indigo)
                     .padding(.horizontal, Space.s1)
                     .background(Ink.paper)
                     .alignmentGuide(.top) { $0[.bottom] - standardY * ChartGeom.stripHeight }

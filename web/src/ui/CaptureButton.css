@@ -23,13 +23,14 @@
   width: var(--capture-h);
   height: var(--capture-h);
   border-radius: var(--r-pill);
-  background: var(--c-ink900);
-  color: var(--c-paper);
+  /* The seal on the page: the one cinnabar fill, from the accent tokens. */
+  background: var(--c-accent-ink);
+  color: var(--c-accent-on);
 }
 
 .capture-button:active {
   /* Pressed is a change of value in the ground, never a lift or a scale. */
-  background: color-mix(in srgb, var(--c-ink900) 86%, var(--c-paper));
+  background: color-mix(in srgb, var(--c-accent-ink) 86%, var(--c-paper));
 }
 
 .capture-button__mark {

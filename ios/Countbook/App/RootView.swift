@@ -216,17 +216,17 @@ private struct TabBar: View {
             // the word is at rest, so it says nothing the word does not.
             VStack(spacing: Space.s1) {
                 Glyph(name: item.glyph, size: 20)
-                    .foregroundStyle(active || alerting(item) ? Ink.ink900 : Ink.ink300)
+                    .foregroundStyle(active ? Ink.indigo : alerting(item) ? Ink.ink900 : Ink.ink300)
                 Text(S.t(item.label))
                     .font(.system(size: TypeScale.labelCJK.size, weight: active || alerting(item) ? .semibold : .medium))
                     .kerning(TypeScale.labelCJK.kerning)
-                    .foregroundStyle(active || alerting(item) ? Ink.ink900 : Ink.ink500)
+                    .foregroundStyle(active ? Ink.indigo : alerting(item) ? Ink.ink900 : Ink.ink500)
             }
                 .padding(.top, Space.s2)
                 .padding(.bottom, Space.s3)
                 .overlay(alignment: .top) {
                     if active {
-                        Ink.ink900
+                        Ink.indigo
                             .frame(height: Layout.hairline * 2)
                             .matchedGeometryEffect(id: "tab.rule", in: rule)
                     }

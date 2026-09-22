@@ -88,21 +88,23 @@ export default function Today({ onCapture, onReckon }: { onCapture(): void; onRe
 
   return (
     <div className={over ? 'today column today--over' : 'today column'}>
-      <section className="today__hero" aria-live="polite">
-        <span className="t-label today__heroLabel">{t('today.available')}</span>
+      {/* The cover of the ledger: the one block of colour on the screen, and the
+          figure it exists for. Provenance stays on it — it is the figure's own
+          derivation — and everything below is printed on paper. */}
+      <div className="today__cover">
+        <section className="today__hero" aria-live="polite">
+          <span className="t-label today__heroLabel">{t('today.available')}</span>
+          {hasStandard ? (
+            <Money fen={figure.perDay} size="hero" role={over ? 'allowance' : 'neutral'} />
+          ) : (
+            <span className="t-hero today__blank" aria-hidden="true">
+              ——
+            </span>
+          )}
+        </section>
+
         {hasStandard ? (
-          <Money fen={figure.perDay} size="hero" role={over ? 'allowance' : 'neutral'} />
-        ) : (
-          <span className="t-hero today__blank" aria-hidden="true">
-            ——
-          </span>
-        )}
-      </section>
-
-      <Rule broken={over} />
-
-      {hasStandard ? (
-        <>
+          <>
           <button
             type="button"
             className="today__provenance"
@@ -151,13 +153,18 @@ export default function Today({ onCapture, onReckon }: { onCapture(): void; onRe
               </div>
             </dl>
           )}
+          </>
+        ) : null}
+      </div>
 
-          {over && figure.recoveryDays > 0 && (
-            <p className="t-body today__trajectory">
-              {t('today.recovery', { days: figure.recoveryDays })}
-            </p>
-          )}
-        </>
+      <Rule broken={over} />
+
+      {hasStandard ? (
+        over && figure.recoveryDays > 0 ? (
+          <p className="t-body today__trajectory">
+            {t('today.recovery', { days: figure.recoveryDays })}
+          </p>
+        ) : null
       ) : (
         <div className="today__firstRun">
           <p className="t-body today__firstRunLine">{t('today.noStandard')}</p>

@@ -155,7 +155,7 @@
   color: var(--c-ink500);
 }
 .pr-seg__opt[aria-checked='true'] {
-  color: var(--c-ink900);
+  color: var(--c-indigo);
   font-weight: 600;
 }
 /* Selection is a rule, never a fill (§2.1 R5). It sits on the bottom hairline
@@ -166,7 +166,7 @@
   bottom: calc(var(--l-hairline) * -1);
   height: calc(var(--l-hairline) * 2);
   width: var(--pr-seg-w, 0);
-  background: var(--c-ink900);
+  background: var(--c-indigo);
   transform: translateX(var(--pr-seg-x, 0));
   transition:
     transform var(--d-stamp-slide) var(--ease),

@@ -3,16 +3,36 @@
    already establishes. */
 
 .today {
-  padding-block: var(--s-7) var(--s-6);
+  padding-block: 0 var(--s-6);
 }
 
-/* ── hero ───────────────────────────────────────────────────────────── */
+/* ── the cover ──────────────────────────────────────────────────────── */
+
+/* Indigo, full bleed, the bottom corners turned like a ledger's cover. It is
+   the only block of colour on the screen; everything it holds is set in the
+   on-indigo inks so the figure reads as printed on it, not laid over it. */
+.today__cover {
+  margin-inline: calc(var(--l-gutter) * -1);
+  padding: var(--s-6) var(--l-gutter) var(--s-5);
+  margin-bottom: var(--s-4);
+  background: var(--c-indigo-ground);
+  color: var(--c-on-indigo);
+  border-radius: 0 0 var(--r-sheet) var(--r-sheet);
+}
+.today__cover .today__heroLabel,
+.today__cover .today__provenanceText,
+.today__cover .today__chevron,
+.today__cover .today__derivation dt,
+.today__cover .money__mark { color: var(--c-on-indigo-muted); }
+.today__cover .money { --money-ink: var(--c-on-indigo); }
+.today__cover .money--over { --money-ink: var(--c-over-on-indigo); }
+.today__cover .today__derivation { border-top: var(--l-hairline) solid var(--c-on-indigo-muted); padding-top: var(--s-3); }
 
 .today__hero {
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  padding-bottom: var(--s-4);
+  padding-bottom: var(--s-3);
 }
 
 .today__heroLabel {
@@ -21,7 +41,7 @@
 
 /* Nothing is known yet, so nothing is asserted: a rule where the figure will be. */
 .today__blank {
-  color: var(--c-ink300);
+  color: var(--c-on-indigo-muted);
 }
 
 /* The one composition event in the product. When the hero breaks the measure,

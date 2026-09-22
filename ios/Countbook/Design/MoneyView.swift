@@ -36,6 +36,9 @@ enum MoneyTone: Sendable {
     case spared
     /// 后悔金额 — lead grey, the absence of a chromatic role rather than one more.
     case regret
+    /// Printed on the indigo cover of 今日: the figure, and the figure below zero.
+    case onIndigo
+    case overOnIndigo
 
     var ink: Color {
         switch self {
@@ -43,6 +46,16 @@ enum MoneyTone: Sendable {
         case .held: return Ink.figHeld
         case .spared: return Ink.figSpared
         case .regret: return Ink.figRegret
+        case .onIndigo: return Ink.onIndigo
+        case .overOnIndigo: return Ink.overOnIndigo
+        }
+    }
+
+    /// The ¥ mark and the 分 on the cover take the cover's muted ink, not ink300.
+    var unitInk: Color? {
+        switch self {
+        case .onIndigo, .overOnIndigo: return Ink.onIndigoMuted
+        default: return nil
         }
     }
 }
@@ -93,19 +106,19 @@ struct MoneyView: View {
             // The sign belongs to the figure and takes its ink; the currency
             // mark is a unit and stays at ink300 whatever the figure means.
             (Text(part.sign).foregroundStyle(ink)
-                + Text(part.symbol).foregroundStyle(Ink.ink300))
-                .font(.system(size: point * Composition.mark, weight: weight).monospacedDigit())
+                + Text(part.symbol).foregroundStyle(tone?.unitInk ?? Ink.ink300))
+                .font(.system(size: point * Composition.mark, weight: weight, design: .serif).monospacedDigit())
                 .kerning(point * Composition.mark * Composition.markTracking)
 
             Text(part.int)
-                .font(.system(size: point, weight: weight).monospacedDigit())
+                .font(.system(size: point, weight: weight, design: .serif).monospacedDigit())
                 .foregroundStyle(ink)
                 .settles(fen, reduced: reduceMotion)
 
             if showsFraction {
                 // Baseline-aligned, never superscripted, in a fixed box.
                 Text(verbatim: ".\(part.frac)")
-                    .font(.system(size: point * Composition.fraction, weight: weight).monospacedDigit())
+                    .font(.system(size: point * Composition.fraction, weight: weight, design: .serif).monospacedDigit())
                     .foregroundStyle(fractionInk)
                     .settles(fen, reduced: reduceMotion)
                     // The box is a floor, not a ceiling. As a fixed width it
@@ -132,6 +145,7 @@ struct MoneyView: View {
     /// has said legibility outranks hierarchy, so the 分 takes ink500 at every
     /// size rather than ink300 at the large ones.
     private var fractionInk: Color {
+        if let unit = tone?.unitInk { return unit }
         if contrast == .increased { return Ink.ink500 }
         return size.isLarge ? Ink.ink300 : Ink.ink500
     }

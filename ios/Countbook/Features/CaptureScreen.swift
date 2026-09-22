@@ -503,7 +503,7 @@ struct CaptureScreen: View {
             recomputeWarning()
         } label: {
             Text(S.locale == .en ? category.nameEn : category.name)
-                .textStyle(.body, ink: chosen ? Ink.ink900 : Ink.ink700)
+                .textStyle(.body, ink: chosen ? Ink.indigo : Ink.ink700)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .padding(.horizontal, Space.s1)
@@ -512,7 +512,7 @@ struct CaptureScreen: View {
                 .overlay {
                     if chosen {
                         RoundedRectangle(cornerRadius: Radius.field, style: .continuous)
-                            .strokeBorder(Ink.ink900,
+                            .strokeBorder(Ink.indigo,
                                           lineWidth: Layout.hairline / max(displayScale, 1))
                     }
                 }

@@ -526,11 +526,11 @@ struct SegmentedStamp<Value: Hashable>: View {
         } label: {
             Text(option.label)
                 .typeRole(.body, weight: chosen ? .semibold : .medium,
-                          ink: chosen ? Ink.ink900 : Ink.ink500)
+                          ink: chosen ? Ink.indigo : Ink.ink500)
                 .frame(minHeight: Layout.hitTarget)
                 .overlay(alignment: .bottom) {
                     if chosen {
-                        Ink.ink900
+                        Ink.indigo
                             .frame(height: Layout.hairline * 2)
                             .matchedGeometryEffect(id: "stamp.rule", in: stamp)
                     }
@@ -1159,10 +1159,17 @@ struct LedgerRow<Amount: View>: View {
             DepletingRing(fraction: holdFraction)
                 .frame(width: Space.s4, alignment: .center)
         } else if let intent {
-            // 必 → 想 → 冲 is a value ramp, not a hue ramp (§2.6).
+            // A seal: cinnabar, square, the character inside. 必 is the faintest
+            // press and 冲 the firmest — the same mark, pressed harder (§2.6).
             Text(S.t(glyphKey(intent)))
-                .typeRole(.mono, weight: intent.stampWeight, ink: intent.ink)
-                .frame(width: Space.s4, alignment: .center)
+                .typeRole(.micro, weight: .semibold, ink: Ink.figOver)
+                .frame(width: Space.s5, height: Space.s5)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .stroke(Ink.figOver, lineWidth: intent == .impulse ? Layout.hairline * 2 : Layout.hairline)
+                )
+                .opacity(intent == .need ? 0.55 : intent == .want ? 0.85 : 1)
+                .frame(width: Space.s5, alignment: .center)
         } else {
             Color.clear.frame(width: Space.s4, height: 0)
         }

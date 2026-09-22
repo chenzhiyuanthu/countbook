@@ -12,12 +12,13 @@
   to { opacity: 1; }
 }
 
-.chart__mark { fill: var(--c-ink700); }
+.chart__mark { fill: var(--c-bar); }
 .chart__mark--over { fill: var(--c-fig-over); }
 .chart__mark--second { fill: var(--c-ink500); }
 
+/* The standard line is structure, so it takes the structure colour. */
 .chart__reference {
-  stroke: var(--c-rule-strong);
+  stroke: var(--c-indigo);
   stroke-width: 1;
 }
 
@@ -83,7 +84,7 @@
   transform: translateY(-100%);
   padding-inline: var(--s-1);
   background: var(--c-paper);
-  color: var(--c-ink500);
+  color: var(--c-indigo);
 }
 
 .chart-strip__scrub {

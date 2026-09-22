@@ -13,38 +13,50 @@ private func dynamic(light: Color, dark: Color) -> Color {
 }
 
 enum Ink {
-    /// app ground
-    static let paper = dynamic(light: Color(red: 0.9686, green: 0.9647, blue: 0.9529), dark: Color(red: 0.0706, green: 0.0706, blue: 0.0667))
-    /// cards, sheets, rows
-    static let surface = dynamic(light: Color(red: 1.0000, green: 1.0000, blue: 1.0000), dark: Color(red: 0.1020, green: 0.1020, blue: 0.0941))
+    /// app ground — 宣纸
+    static let paper = dynamic(light: Color(red: 0.9569, green: 0.9373, blue: 0.8902), dark: Color(red: 0.0784, green: 0.0745, blue: 0.0588))
+    /// cards, sheets, rows, the tab bar
+    static let surface = dynamic(light: Color(red: 0.9804, green: 0.9686, blue: 0.9373), dark: Color(red: 0.1098, green: 0.1020, blue: 0.0824))
     /// keypad, inset wells, table headers
-    static let surfaceSunken = dynamic(light: Color(red: 0.9451, green: 0.9373, blue: 0.9176), dark: Color(red: 0.0549, green: 0.0549, blue: 0.0510))
+    static let surfaceSunken = dynamic(light: Color(red: 0.9255, green: 0.9020, blue: 0.8471), dark: Color(red: 0.0588, green: 0.0549, blue: 0.0431))
     /// hero + section figures, primary text
-    static let ink900 = dynamic(light: Color(red: 0.0667, green: 0.0667, blue: 0.0627), dark: Color(red: 0.9490, green: 0.9412, blue: 0.9176))
+    static let ink900 = dynamic(light: Color(red: 0.1137, green: 0.1059, blue: 0.0902), dark: Color(red: 0.9490, green: 0.9294, blue: 0.8863))
     /// body text, row figures
-    static let ink700 = dynamic(light: Color(red: 0.2078, green: 0.2039, blue: 0.1843), dark: Color(red: 0.7882, green: 0.7765, blue: 0.7451))
-    /// labels, secondary rows
-    static let ink500 = dynamic(light: Color(red: 0.4314, green: 0.4235, blue: 0.3922), dark: Color(red: 0.5490, green: 0.5373, blue: 0.4980))
-    /// units, 分, timestamps, placeholders
-    static let ink300 = dynamic(light: Color(red: 0.6471, green: 0.6353, blue: 0.6039), dark: Color(red: 0.3765, green: 0.3647, blue: 0.3373))
+    static let ink700 = dynamic(light: Color(red: 0.2314, green: 0.2196, blue: 0.1882), dark: Color(red: 0.7961, green: 0.7725, blue: 0.7176))
+    /// labels, secondary rows, section marks
+    static let ink500 = dynamic(light: Color(red: 0.4275, green: 0.4039, blue: 0.3490), dark: Color(red: 0.5569, green: 0.5333, blue: 0.4784))
+    /// units, 分, timestamps, placeholders, resting tab marks
+    static let ink300 = dynamic(light: Color(red: 0.6392, green: 0.6157, blue: 0.5569), dark: Color(red: 0.3804, green: 0.3608, blue: 0.3216))
     /// hairlines
-    static let rule = dynamic(light: Color(red: 0.8863, green: 0.8745, blue: 0.8471), dark: Color(red: 0.1686, green: 0.1647, blue: 0.1529))
+    static let rule = dynamic(light: Color(red: 0.8667, green: 0.8392, blue: 0.7765), dark: Color(red: 0.1725, green: 0.1608, blue: 0.1451))
     /// section rules, focused card borders
-    static let ruleStrong = dynamic(light: Color(red: 0.7882, green: 0.7725, blue: 0.7333), dark: Color(red: 0.2392, green: 0.2314, blue: 0.2118))
-    /// ONLY: negative 今日可用, category above standard
-    static let figOver = dynamic(light: Color(red: 0.6392, green: 0.1647, blue: 0.1333), dark: Color(red: 0.8784, green: 0.3961, blue: 0.3529))
+    static let ruleStrong = dynamic(light: Color(red: 0.7882, green: 0.7608, blue: 0.6980), dark: Color(red: 0.2431, green: 0.2275, blue: 0.2000))
+    /// 朱砂 — negative 今日可用, category above standard, the stamps
+    static let figOver = dynamic(light: Color(red: 0.7176, green: 0.2078, blue: 0.1686), dark: Color(red: 0.8863, green: 0.3804, blue: 0.3098))
     /// ONLY: cooling period, pending sync
-    static let figHeld = dynamic(light: Color(red: 0.5412, green: 0.4157, blue: 0.1216), dark: Color(red: 0.8235, green: 0.6510, blue: 0.2902))
-    /// ONLY: 已放弃 / 已省 totals
-    static let figSpared = dynamic(light: Color(red: 0.1804, green: 0.3647, blue: 0.2941), dark: Color(red: 0.4353, green: 0.6627, blue: 0.5412))
+    static let figHeld = dynamic(light: Color(red: 0.6039, green: 0.4157, blue: 0.1098), dark: Color(red: 0.8235, green: 0.6510, blue: 0.2902))
+    /// 青绿 — a gain, 已放弃 / 已省 totals, a confirmed sync
+    static let figSpared = dynamic(light: Color(red: 0.1725, green: 0.4314, blue: 0.3098), dark: Color(red: 0.4353, green: 0.7451, blue: 0.6039))
     /// ONLY: 后悔金额 — dead lead, never urgent
-    static let figRegret = dynamic(light: Color(red: 0.3176, green: 0.3059, blue: 0.2784), dark: Color(red: 0.6039, green: 0.5882, blue: 0.5490))
+    static let figRegret = dynamic(light: Color(red: 0.3412, green: 0.3255, blue: 0.2902), dark: Color(red: 0.6039, green: 0.5882, blue: 0.5490))
     /// modal scrim, no blur
-    static let scrim = dynamic(light: Color(red: 0.0667, green: 0.0667, blue: 0.0627).opacity(0.28), dark: Color(red: 0.0000, green: 0.0000, blue: 0.0000).opacity(0.48))
-    /// primary button fill
-    static let accentInk = dynamic(light: Color(red: 0.0667, green: 0.0667, blue: 0.0627), dark: Color(red: 0.9490, green: 0.9412, blue: 0.9176))
-    /// text on primary button
-    static let accentOn = dynamic(light: Color(red: 1.0000, green: 1.0000, blue: 1.0000), dark: Color(red: 0.0706, green: 0.0706, blue: 0.0667))
+    static let scrim = dynamic(light: Color(red: 0.1137, green: 0.1059, blue: 0.0902).opacity(0.3), dark: Color(red: 0.0000, green: 0.0000, blue: 0.0000).opacity(0.5))
+    /// the 记 button fill — the one seal on the page
+    static let accentInk = dynamic(light: Color(red: 0.7176, green: 0.2078, blue: 0.1686), dark: Color(red: 0.8863, green: 0.3804, blue: 0.3098))
+    /// text on the 记 button
+    static let accentOn = dynamic(light: Color(red: 1.0000, green: 1.0000, blue: 1.0000), dark: Color(red: 0.0784, green: 0.0745, blue: 0.0588))
+    /// 靛青 — the selected rule, the standard line, the active tab
+    static let indigo = dynamic(light: Color(red: 0.1333, green: 0.2471, blue: 0.3882), dark: Color(red: 0.4784, green: 0.5922, blue: 0.7412))
+    /// the 今日可用 ground: the ledger cover
+    static let indigoGround = dynamic(light: Color(red: 0.1333, green: 0.2471, blue: 0.3882), dark: Color(red: 0.1059, green: 0.1804, blue: 0.2784))
+    /// figure and title on the indigo ground
+    static let onIndigo = dynamic(light: Color(red: 0.9569, green: 0.9373, blue: 0.8902), dark: Color(red: 0.9333, green: 0.9490, blue: 0.9686))
+    /// provenance line on the indigo ground
+    static let onIndigoMuted = dynamic(light: Color(red: 0.7843, green: 0.8275, blue: 0.8863), dark: Color(red: 0.6235, green: 0.6902, blue: 0.7765))
+    /// a negative figure on the indigo ground
+    static let overOnIndigo = dynamic(light: Color(red: 0.9451, green: 0.7255, blue: 0.6627), dark: Color(red: 0.9451, green: 0.6549, blue: 0.6039))
+    /// the month strip: a day under the line
+    static let bar = dynamic(light: Color(red: 0.6627, green: 0.7137, blue: 0.7843), dark: Color(red: 0.2431, green: 0.3059, blue: 0.3882))
 }
 
 enum Space {
@@ -91,8 +103,8 @@ enum TypeScale {
         }
     }
 
-    static let hero = Metrics(size: 64, weight: 300, tracking: -0.02, leading: 1.02)
-    static let screen = Metrics(size: 44, weight: 300, tracking: -0.02, leading: 1.06)
+    static let hero = Metrics(size: 64, weight: 400, tracking: -0.02, leading: 1.02)
+    static let screen = Metrics(size: 44, weight: 400, tracking: -0.02, leading: 1.06)
     static let section = Metrics(size: 34, weight: 400, tracking: -0.015, leading: 1.12)
     static let row = Metrics(size: 17, weight: 500, tracking: 0, leading: 1.3)
     static let body = Metrics(size: 15, weight: 400, tracking: 0, leading: 1.53)

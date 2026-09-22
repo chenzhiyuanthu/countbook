@@ -83,6 +83,10 @@ ${layout.join('\n')}
     "Segoe UI Variable", "Segoe UI", Roboto, "PingFang SC", "HarmonyOS Sans SC",
     "Source Han Sans SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
   --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  /* figures — the serif that is already on the device: New York on Apple, a
+     Song face elsewhere. A ledger's numbers, not a dashboard's. */
+  --f-figure: ui-serif, "New York", -apple-system-ui-serif, "Songti SC", "STSong",
+    "Source Han Serif SC", "Noto Serif SC", Georgia, "Times New Roman", serif;
 }
 
 :root[data-theme="dark"] {

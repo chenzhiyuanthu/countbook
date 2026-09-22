@@ -6,22 +6,28 @@
   color-scheme: light dark;
 
   /* colour — light */
-  --c-paper: #F7F6F3;
-  --c-surface: #FFFFFF;
-  --c-surface-sunken: #F1EFEA;
-  --c-ink900: #111110;
-  --c-ink700: #35342F;
-  --c-ink500: #6E6C64;
-  --c-ink300: #A5A29A;
-  --c-rule: #E2DFD8;
-  --c-rule-strong: #C9C5BB;
-  --c-fig-over: #A32A22;
-  --c-fig-held: #8A6A1F;
-  --c-fig-spared: #2E5D4B;
-  --c-fig-regret: #514E47;
-  --c-scrim: rgba(17,17,16,0.28);
-  --c-accent-ink: #111110;
+  --c-paper: #F4EFE3;
+  --c-surface: #FAF7EF;
+  --c-surface-sunken: #ECE6D8;
+  --c-ink900: #1D1B17;
+  --c-ink700: #3B3830;
+  --c-ink500: #6D6759;
+  --c-ink300: #A39D8E;
+  --c-rule: #DDD6C6;
+  --c-rule-strong: #C9C2B2;
+  --c-fig-over: #B7352B;
+  --c-fig-held: #9A6A1C;
+  --c-fig-spared: #2C6E4F;
+  --c-fig-regret: #57534A;
+  --c-scrim: rgba(29,27,23,0.30);
+  --c-accent-ink: #B7352B;
   --c-accent-on: #FFFFFF;
+  --c-indigo: #223F63;
+  --c-indigo-ground: #223F63;
+  --c-on-indigo: #F4EFE3;
+  --c-on-indigo-muted: #C8D3E2;
+  --c-over-on-indigo: #F1B9A9;
+  --c-bar: #A9B6C8;
 
   /* space */
   --s-0: 0px;
@@ -44,11 +50,11 @@
 
   /* type */
   --t-hero-size: 4rem;
-  --t-hero-weight: 300;
+  --t-hero-weight: 400;
   --t-hero-tracking: -0.02em;
   --t-hero-leading: 1.02;
   --t-screen-size: 2.75rem;
-  --t-screen-weight: 300;
+  --t-screen-weight: 400;
   --t-screen-tracking: -0.02em;
   --t-screen-leading: 1.06;
   --t-section-size: 2.125rem;
@@ -103,44 +109,60 @@
     "Segoe UI Variable", "Segoe UI", Roboto, "PingFang SC", "HarmonyOS Sans SC",
     "Source Han Sans SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
   --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  /* figures — the serif that is already on the device: New York on Apple, a
+     Song face elsewhere. A ledger's numbers, not a dashboard's. */
+  --f-figure: ui-serif, "New York", -apple-system-ui-serif, "Songti SC", "STSong",
+    "Source Han Serif SC", "Noto Serif SC", Georgia, "Times New Roman", serif;
 }
 
 :root[data-theme="dark"] {
-  --c-paper: #121211;
-  --c-surface: #1A1A18;
-  --c-surface-sunken: #0E0E0D;
-  --c-ink900: #F2F0EA;
-  --c-ink700: #C9C6BE;
-  --c-ink500: #8C897F;
-  --c-ink300: #605D56;
-  --c-rule: #2B2A27;
-  --c-rule-strong: #3D3B36;
-  --c-fig-over: #E0655A;
+  --c-paper: #14130F;
+  --c-surface: #1C1A15;
+  --c-surface-sunken: #0F0E0B;
+  --c-ink900: #F2EDE2;
+  --c-ink700: #CBC5B7;
+  --c-ink500: #8E887A;
+  --c-ink300: #615C52;
+  --c-rule: #2C2925;
+  --c-rule-strong: #3E3A33;
+  --c-fig-over: #E2614F;
   --c-fig-held: #D2A64A;
-  --c-fig-spared: #6FA98A;
+  --c-fig-spared: #6FBE9A;
   --c-fig-regret: #9A968C;
-  --c-scrim: rgba(0,0,0,0.48);
-  --c-accent-ink: #F2F0EA;
-  --c-accent-on: #121211;
+  --c-scrim: rgba(0,0,0,0.50);
+  --c-accent-ink: #E2614F;
+  --c-accent-on: #14130F;
+  --c-indigo: #7A97BD;
+  --c-indigo-ground: #1B2E47;
+  --c-on-indigo: #EEF2F7;
+  --c-on-indigo-muted: #9FB0C6;
+  --c-over-on-indigo: #F1A79A;
+  --c-bar: #3E4E63;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --c-paper: #121211;
-    --c-surface: #1A1A18;
-    --c-surface-sunken: #0E0E0D;
-    --c-ink900: #F2F0EA;
-    --c-ink700: #C9C6BE;
-    --c-ink500: #8C897F;
-    --c-ink300: #605D56;
-    --c-rule: #2B2A27;
-    --c-rule-strong: #3D3B36;
-    --c-fig-over: #E0655A;
+    --c-paper: #14130F;
+    --c-surface: #1C1A15;
+    --c-surface-sunken: #0F0E0B;
+    --c-ink900: #F2EDE2;
+    --c-ink700: #CBC5B7;
+    --c-ink500: #8E887A;
+    --c-ink300: #615C52;
+    --c-rule: #2C2925;
+    --c-rule-strong: #3E3A33;
+    --c-fig-over: #E2614F;
     --c-fig-held: #D2A64A;
-    --c-fig-spared: #6FA98A;
+    --c-fig-spared: #6FBE9A;
     --c-fig-regret: #9A968C;
-    --c-scrim: rgba(0,0,0,0.48);
-    --c-accent-ink: #F2F0EA;
-    --c-accent-on: #121211;
+    --c-scrim: rgba(0,0,0,0.50);
+    --c-accent-ink: #E2614F;
+    --c-accent-on: #14130F;
+    --c-indigo: #7A97BD;
+    --c-indigo-ground: #1B2E47;
+    --c-on-indigo: #EEF2F7;
+    --c-on-indigo-muted: #9FB0C6;
+    --c-over-on-indigo: #F1A79A;
+    --c-bar: #3E4E63;
   }
 }

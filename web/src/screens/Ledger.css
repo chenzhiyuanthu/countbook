@@ -254,16 +254,24 @@
 }
 
 /* 必 → 想 → 冲: a value ramp, never a hue ramp. */
+/* A seal: cinnabar, square, the character inside. 必 is the faintest press,
+   冲 the firmest — the same mark, pressed harder. */
 .ledger__stamp {
   flex: none;
-  width: var(--s-4);
-  text-align: center;
-  font-size: var(--t-label-size);
+  display: inline-grid;
+  place-items: center;
+  width: var(--s-5);
+  height: var(--s-5);
+  border-radius: 3px;
+  border: var(--l-hairline) solid transparent;
+  font-size: var(--t-micro-size);
+  font-weight: 600;
   letter-spacing: 0;
+  color: var(--c-fig-over);
 }
-.ledger__stamp--need { color: var(--c-ink500); font-weight: 500; }
-.ledger__stamp--want { color: var(--c-ink700); font-weight: 500; }
-.ledger__stamp--impulse { color: var(--c-ink900); font-weight: 600; }
+.ledger__stamp--need { border-color: var(--c-fig-over); opacity: .55; }
+.ledger__stamp--want { border-color: var(--c-fig-over); opacity: .85; }
+.ledger__stamp--impulse { border-color: var(--c-fig-over); border-width: calc(var(--l-hairline) * 2); }
 
 .ledger__amount {
   flex: none;
