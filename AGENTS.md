@@ -60,6 +60,13 @@ on its second load after it (the first load installs the new worker).
 `chenzhiyuanthu.github.io/countbook/` is a mirror that deploys from a push to
 `main` (`.github/workflows/pages.yml`); it lags until something is pushed.
 
+The box also serves `chenzhiyuanthu.com` itself: a static index of everything
+on it (据实, 琢玉计划, 一起去买911), from `/opt/home` bind-mounted read-only into
+the edge Caddy (`capital-race-caddy`, compose in `/opt/capital-race`). Its
+source and `deploy.sh` live in `~/chenzhiyuanthu/home`, not in this repo. That
+compose file now declares the `countbook-edge` network, so recreating the edge
+Caddy keeps its route to the countbook container.
+
 ## Ship the iOS app — over the air
 
 This is how the owner's phone gets a build. No cable, no Xcode window, no Mac
