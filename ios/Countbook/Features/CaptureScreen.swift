@@ -45,18 +45,35 @@ struct CaptureScreen: View {
     let onClose: () -> Void
 
     @Environment(Store.self) private var store
+    @Environment(SyncEngine.self) private var sync
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicType
     @Environment(\.displayScale) private var displayScale
+    /// Measured by SheetContainer on the sheet's root, never on this content,
+    /// so sizing the grid and keypad from it cannot loop back into itself.
+    @Environment(\.sheetRoom) private var room
 
     // 整数部分 / 小数部分 / 是否已进入小数态 — PRODUCT.md §4.3.
     @State private var intPart = "0"
     @State private var fracPart = ""
     @State private var inFrac = false
 
+    @State private var kind: EntryKind = .spend
+    /// 盈利 / 亏损 — an investment result has a sign; a purchase does not.
+    @State private var loss = false
     @State private var categoryID: String?
     @State private var intent: Intent?
     @State private var note = ""
+
+    /// The currency the figure is keyed in. When it is not the ledger's own, the
+    /// day's rate is asked for and pre-filled — never locked: a broker's rate
+    /// beats a reference one.
+    @State private var keyedCurrency = ""
+    @State private var currenciesOpen = false
+    @State private var rate: Rate?
+    @State private var rateText = ""
+    @State private var rateBusy = false
+    @State private var rateTask: Task<Void, Never>?
     @State private var merchant = ""
     @State private var day: Day = ""
 
@@ -77,29 +94,11 @@ struct CaptureScreen: View {
     @State private var warning: String?
     @State private var categories: [Category] = []
 
-    /// The sheet is anchored to the bottom, so this rectangle's bottom edge and
-    /// width are stable no matter how tall the content turns out — which is what
-    /// makes it safe to size the grid and the keypad from it.
-    @State private var box: CGRect = .zero
-
     @FocusState private var noteFocused: Bool
 
     var body: some View {
         SheetContainer(accessibilityLabel: S.t(.captureTitle), onClose: onClose) {
             content
-                .background {
-                    // The sheet is anchored to the bottom, so this rectangle's
-                    // bottom edge and width do not move when the content above
-                    // grows — which is what makes it safe to size the grid and
-                    // the keypad from it without the layout chasing itself.
-                    GeometryReader { proxy in
-                        Color.clear
-                            .onAppear { box = proxy.frame(in: .global) }
-                            .onChange(of: proxy.frame(in: .global)) { _, next in
-                                box = next
-                            }
-                    }
-                }
         }
         // SheetContainer draws the scrim, the one shadow and the sheet radius
         // itself; the system sheet must not paint a second ground behind it.
@@ -107,6 +106,8 @@ struct CaptureScreen: View {
         .presentationDragIndicator(.hidden)
         .onAppear(perform: prime)
         .onChange(of: store.events.count) { _, _ in recompute() }
+        .onChange(of: keyedCurrency) { _, _ in refetchRate() }
+        .onChange(of: day) { _, _ in refetchRate() }
     }
 
     // MARK: - Composition
@@ -114,6 +115,8 @@ struct CaptureScreen: View {
     private var content: some View {
         let m = metrics
         return VStack(alignment: .leading, spacing: 0) {
+            kindRow
+
             head
                 .frame(height: Layout.hitTarget)
 
@@ -123,6 +126,14 @@ struct CaptureScreen: View {
 
             amountRow
 
+            if currenciesOpen {
+                currencyShortcuts
+            }
+
+            if foreign {
+                rateRow
+            }
+
             consequenceRow
 
             RuleView().padding(.vertical, Space.s1)
@@ -131,9 +142,17 @@ struct CaptureScreen: View {
 
             RuleView().padding(.vertical, Space.s1)
 
-            stampRow
+            // An investment carries no stamp — there is nothing to judge about a
+            // result, and nothing to be slowed down about — but it has a sign.
+            if income {
+                resultRow
 
-            RuleView().padding(.vertical, Space.s1)
+                RuleView().padding(.vertical, Space.s1)
+            } else {
+                stampRow
+
+                RuleView().padding(.vertical, Space.s1)
+            }
 
             if !fieldsOpen {
                 keypad(m)
@@ -141,6 +160,34 @@ struct CaptureScreen: View {
 
             commit
         }
+    }
+
+    // MARK: - 支出 / 收入
+
+    /// The one switch above everything else: it changes which categories are
+    /// offered and whether a stamp is asked for, so it is asked first. What was
+    /// keyed stays, because the figure is usually right.
+    private var kindRow: some View {
+        SegmentedStamp(
+            options: [
+                .init(value: EntryKind.spend, label: S.t(.captureSpend)),
+                .init(value: EntryKind.income, label: S.t(.captureIncome)),
+            ],
+            selection: kind,
+            accessibilityLabel: S.t(.captureTitle)
+        ) { next in
+            guard next != kind else { return }
+            kind = next
+            categoryID = nil
+            intent = nil
+            loss = false
+            overrideHold = false
+            categories = store.ledger.categories.values
+                .filter { $0.kind == next && $0.archived != true }
+                .sorted { $0.order == $1.order ? $0.id < $1.id : $0.order < $1.order }
+            recomputeWarning()
+        }
+        .padding(.bottom, Space.s2)
     }
 
     // MARK: - Head: the date, the optional fields, 继续记
@@ -311,12 +358,82 @@ struct CaptureScreen: View {
     private var amountRow: some View {
         HStack(alignment: .firstTextBaseline, spacing: Space.s1) {
             Spacer(minLength: 0)
-            MoneyView(fen: amountFen, size: .screen, currency: currency)
+            MoneyView(fen: sign * keyedFen, size: .screen, currency: keyedCurrency)
             caret
+            // The code sits after the figure at label size: a fact about the
+            // figure, not part of it.
+            Button { currenciesOpen.toggle() } label: {
+                Text(keyedCurrency)
+                    .textStyle(.label, ink: currenciesOpen ? Ink.ink900 : Ink.ink500)
+                    .frame(minHeight: Layout.hitTarget)
+                    .padding(.leading, Space.s2)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(S.t(.captureCurrency)) \(keyedCurrency)")
+            .accessibilityAddTraits(currenciesOpen ? [.isButton, .isSelected] : .isButton)
         }
         .padding(.bottom, Space.s2)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(S.t(.captureAmount))
+    }
+
+    /// The ledger's own currency first, then the rest; the same underline the
+    /// date shortcuts use, and choosing one closes the row again.
+    private var currencyShortcuts: some View {
+        HStack(spacing: 0) {
+            ForEach([currency] + currencies.filter { $0 != currency }, id: \.self) { code in
+                Button {
+                    keyedCurrency = code
+                    currenciesOpen = false
+                } label: {
+                    Text(code)
+                        .textStyle(.mono, mono: true, ink: keyedCurrency == code ? Ink.ink900 : Ink.ink700)
+                        .overlay(alignment: .bottom) {
+                            if keyedCurrency == code {
+                                Ink.ink500.frame(height: Layout.hairline / max(displayScale, 1))
+                            }
+                        }
+                        .frame(maxWidth: .infinity, minHeight: Layout.hitTarget)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(keyedCurrency == code ? [.isButton, .isSelected] : .isButton)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(S.t(.captureCurrency))
+    }
+
+    /// The rate, typed or pre-filled, and what the figure comes to in the
+    /// ledger's currency — the figure every rule below actually uses.
+    private var rateRow: some View {
+        VStack(alignment: .trailing, spacing: Space.s1) {
+            HStack(alignment: .firstTextBaseline, spacing: Space.s2) {
+                Text(S.t(.captureRate)).textStyle(.label)
+                TextField(rateBusy ? "…" : "0.0000", text: $rateText)
+                    .textStyle(.mono, mono: true)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: Space.s10 + Space.s7, height: Space.s7)
+                    .padding(.horizontal, Space.s2)
+                    .background(Ink.surfaceSunken, in: RoundedRectangle(cornerRadius: Radius.field, style: .continuous))
+                    .accessibilityLabel(S.t(.captureRate))
+                Spacer(minLength: Space.s3)
+                Text("≈").textStyle(.label)
+                MoneyView(fen: sign * amountFen, size: .body, currency: currency)
+            }
+            Text(rateNote).textStyle(.micro)
+        }
+        .padding(.bottom, Space.s2)
+    }
+
+    private var rateNote: String {
+        if rateBusy { return "…" }
+        guard let rate else { return S.t(.captureRateUnavailable) }
+        if rate.source == .remembered { return S.t(.captureRateRemembered) }
+        return S.t(.captureRateAsOf, ["day": String(rate.asOf.suffix(5))])
     }
 
     @ViewBuilder
@@ -343,8 +460,12 @@ struct CaptureScreen: View {
     private var consequenceRow: some View {
         let after = perDay - amountFen
         return HStack(alignment: .firstTextBaseline, spacing: Space.s2) {
-            Text(S.t(.captureConsequence)).textStyle(.label)
-            MoneyView(fen: after, size: .body, tone: after < 0 ? .over : nil, currency: currency)
+            if income {
+                Text(S.t(.captureIncomeNote)).textStyle(.label)
+            } else {
+                Text(S.t(.captureConsequence)).textStyle(.label)
+                MoneyView(fen: after, size: .body, tone: after < 0 ? .over : nil, currency: currency)
+            }
             Spacer(minLength: 0)
         }
         .padding(.bottom, Space.s2)
@@ -399,6 +520,19 @@ struct CaptureScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(chosen ? [.isButton, .isSelected] : .isButton)
+    }
+
+    // MARK: - The result
+
+    private var resultRow: some View {
+        SegmentedStamp(
+            options: [
+                .init(value: false, label: S.t(.captureGain)),
+                .init(value: true, label: S.t(.captureLoss)),
+            ],
+            selection: loss,
+            accessibilityLabel: S.t(.captureResult)
+        ) { loss = $0 }
     }
 
     // MARK: - The stamp
@@ -596,16 +730,29 @@ struct CaptureScreen: View {
     // MARK: - Derived values
 
     private var currency: String { store.ledger.settings.currency }
+    private var income: Bool { kind == .income }
+    /// What is stored: a loss is the same figure below zero.
+    private var sign: Fen { income && loss ? -1 : 1 }
+    private var foreign: Bool { !keyedCurrency.isEmpty && keyedCurrency != currency }
+    private var rateMicro: Int? { foreign ? parseRate(rateText) : nil }
 
     /// §4.3 — 整数分 end to end. `intPart` is capped at six digits, so the
-    /// product cannot overflow.
-    private var amountFen: Fen {
+    /// product cannot overflow. This is what was keyed, in minor units of
+    /// `keyedCurrency`.
+    private var keyedFen: Fen {
         let whole = Int(intPart) ?? 0
         let frac = Int((fracPart + "00").prefix(2)) ?? 0
         return whole * 100 + frac
     }
 
-    private var overFloor: Bool { amountFen >= store.ledger.settings.coolingFloorFen }
+    /// The same in the ledger's currency — the figure every rule below uses.
+    private var amountFen: Fen {
+        guard foreign else { return keyedFen }
+        guard let rateMicro else { return 0 }
+        return convert(keyedFen, rateMicro: rateMicro)
+    }
+
+    private var overFloor: Bool { !income && amountFen >= store.ledger.settings.coolingFloorFen }
     private var cooling: Int { overFloor ? coolingDays(amountFen) : 0 }
     private var suspendable: Bool {
         overFloor && (intent == .want || intent == .impulse) && !overrideHold
@@ -613,13 +760,17 @@ struct CaptureScreen: View {
     private var showsTier: Bool { cooling > 0 && intent != nil && intent != .need }
     /// SCREENS.md C9b — the hold is asked for by the amount, or by an allowance
     /// that is already spent, whichever is true first.
-    private var needsHold: Bool { overFloor || perDay < 0 }
-    private var missing: Bool { amountFen == 0 || categoryID == nil || intent == nil }
+    private var needsHold: Bool { !income && (overFloor || perDay < 0) }
+    private var needsRate: Bool { foreign && rateMicro == nil }
+    private var missing: Bool {
+        keyedFen == 0 || needsRate || categoryID == nil || (!income && intent == nil)
+    }
 
     private var hint: String {
-        if amountFen == 0 { return S.t(.captureNeedAmount) }
+        if keyedFen == 0 { return S.t(.captureNeedAmount) }
+        if needsRate { return S.t(.captureNeedRate) }
         if categoryID == nil { return S.t(.captureNeedCategory) }
-        if intent == nil { return S.t(.captureIntentRequired) }
+        if !income, intent == nil { return S.t(.captureIntentRequired) }
         return ""
     }
 
@@ -637,12 +788,12 @@ struct CaptureScreen: View {
 
     private var metrics: Metrics {
         let hair = Layout.hairline / max(displayScale, 1)
-        let width = box.width > 0 ? box.width : SheetWidth.fallback
+        let width = room.width > 0 ? room.width : SheetWidth.fallback
         // The sheet is bottom-anchored, so its bottom edge does not move when
         // the content above it grows; the ceiling is the room the status bar and
         // the presenting sheet's own inset leave at the top.
         let ceiling = Space.s10 + Space.s5
-        let bottom = box.maxY > 0 ? box.maxY : SheetWidth.fallbackHeight
+        let bottom = room.bottom > 0 ? room.bottom : SheetWidth.fallbackHeight
         let available = max(bottom - ceiling, Layout.hitTarget)
 
         let screenFig = TextRole.screen.size(at: dynamicType)
@@ -650,12 +801,15 @@ struct CaptureScreen: View {
         let microFig = TextRole.micro.size(at: dynamicType)
         let bodyFig = TextRole.body.size(at: dynamicType)
 
-        var chrome = Layout.hitTarget                       // the head row
+        var chrome = Layout.hitTarget + Space.s2            // 支出 / 收入
+        chrome += Layout.hitTarget                          // the head row
         chrome += screenFig * 1.25 + Space.s2               // the amount
+        if currenciesOpen { chrome += Layout.hitTarget }    // the currency row
+        if foreign { chrome += Space.s7 + microFig * 1.4 + Space.s1 + Space.s2 } // the rate row
         chrome += labelFig * 1.5 + Space.s2                 // the consequence
         chrome += 3 * (Space.s1 * 2 + hair)                 // three rules
-        chrome += Layout.hitTarget                          // the stamp
-        if showsTier { chrome += microFig * 1.4 + Space.s1 }
+        chrome += Layout.hitTarget                          // the stamp, or 盈利 / 亏损
+        if !income, showsTier { chrome += microFig * 1.4 + Space.s1 }
         chrome += Space.s3 + Theme.barHeight                // the commit bar
         if suspendable { chrome += Layout.hitTarget }       // 仍要立即记入
         if fieldsOpen {
@@ -736,26 +890,35 @@ struct CaptureScreen: View {
     // MARK: - Committing
 
     private func save(keep: Bool) {
-        guard !missing, let categoryID, let intent else { return }
+        guard !missing, let categoryID else { return }
+        guard income || intent != nil else { return }
+        let receipt = foreign
+            ? rateMicro.map { ForeignAmount(currency: keyedCurrency, amount: sign * keyedFen, rateMicro: $0) }
+            : nil
         let entry = Entry(
             id: captureID(),
-            kind: .spend,
-            amount: amountFen,
+            kind: kind,
+            amount: sign * amountFen,
             currency: currency,
             categoryId: categoryID,
-            intent: intent,
+            intent: income ? nil : intent,
             note: note.trimmingCharacters(in: .whitespaces),
             merchant: merchant.trimmingCharacters(in: .whitespaces),
             day: day,
-            createdAt: nowMs
+            createdAt: nowMs,
+            original: receipt
         )
+        if let receipt { FX.rememberRate(receipt.currency, currency, receipt.rateMicro) }
         let eventID = store.commit(.entryAdd(entry: entry))
-        store.toast(S.t(.captureSaved),
-                    action: ToastAction(label: S.t(.ledgerUndo)) { store.undo(eventID: eventID) })
         guard keep else {
+            // The sheet closes and the row prints in the ledger — that is the
+            // receipt. No toast on a plain save (DESIGN.md §6.5).
             onClose()
             return
         }
+        // Staying open, the receipt has to be said, and it can be taken back.
+        store.toast(S.t(.captureSaved),
+                    action: ToastAction(label: S.t(.ledgerUndo)) { store.undo(eventID: eventID) })
         // The stamp and the category survive: the next entry is usually the same
         // kind of purchase, and re-choosing them is the tax that ends a streak.
         clearAmount()
@@ -792,10 +955,45 @@ struct CaptureScreen: View {
 
     private func prime() {
         if day.isEmpty { day = store.today }
+        if keyedCurrency.isEmpty { keyedCurrency = currency }
+        #if DEBUG
+        // Screenshot affordances, the same kind as RootView's `-startTab`:
+        //   -openCapture 1 -captureKind income -captureCurrency USD -captureAmount 1200
+        let flags = UserDefaults.standard
+        if let raw = flags.string(forKey: "captureKind"), let k = EntryKind(rawValue: raw) { kind = k }
+        if let code = flags.string(forKey: "captureCurrency"), currencies.contains(code) { keyedCurrency = code }
+        if let digits = flags.string(forKey: "captureAmount"), !digits.isEmpty,
+           digits.allSatisfy({ $0.isASCII && $0.isNumber }) {
+            intPart = String(digits.prefix(maxIntDigits))
+        }
+        #endif
         categories = store.ledger.categories.values
-            .filter { $0.kind == .spend && $0.archived != true }
+            .filter { $0.kind == kind && $0.archived != true }
             .sorted { $0.order == $1.order ? $0.id < $1.id : $0.order < $1.order }
         recompute()
+    }
+
+    /// The day's rate for the keyed currency, pre-filled and editable. A change
+    /// of currency or day while one is in flight discards that answer.
+    private func refetchRate() {
+        rateTask?.cancel()
+        guard foreign else {
+            rate = nil
+            rateText = ""
+            rateBusy = false
+            return
+        }
+        rateBusy = true
+        let from = keyedCurrency, to = currency, on = day
+        let base: String
+        if case .server(let cfg, _)? = sync.config { base = cfg.baseUrl } else { base = defaultServerURL }
+        rateTask = Task {
+            let found = await FX.fetchRate(from, to, day: on, baseUrl: base)
+            guard !Task.isCancelled else { return }
+            rate = found
+            rateText = found.map { formatRate($0.rateMicro) } ?? ""
+            rateBusy = false
+        }
     }
 
     private func recompute() {

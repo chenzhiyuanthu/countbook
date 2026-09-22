@@ -11,12 +11,32 @@ enum EntryKind: String, Codable, Sendable, CaseIterable {
     case spend, income
 }
 
+/// What was actually paid or received when that was not in the ledger's own
+/// currency: the foreign figure and the rate it was carried across at. The
+/// rate is an integer number of millionths (7.1234 → 7_123_400) so both
+/// platforms convert with the same integer arithmetic (Money.swift `convert`).
+struct ForeignAmount: Codable, Equatable, Sendable {
+    var currency: String
+    /// Minor units of `currency` — cents for USD — never a float.
+    var amount: Fen
+    var rateMicro: Int
+
+    init(currency: String, amount: Fen, rateMicro: Int) {
+        self.currency = currency
+        self.amount = amount
+        self.rateMicro = rateMicro
+    }
+}
+
 struct Entry: Codable, Equatable, Sendable, Identifiable {
     var id: String
     var kind: EntryKind
-    /// Always positive; `kind` carries the direction.
+    /// Always positive; `kind` carries the direction. Always in `currency`.
     var amount: Fen
+    /// The ledger's home currency (settings.currency at the time of writing).
     var currency: String
+    /// Present when the money changed hands in another currency; `amount` is its conversion.
+    var original: ForeignAmount?
     var categoryId: String
     /// Required on spend, null on income — there is nothing to judge about a salary.
     var intent: Intent?
@@ -52,12 +72,14 @@ struct Entry: Codable, Equatable, Sendable, Identifiable {
         reviewedAt: Int? = nil,
         deferrals: Int? = nil,
         wishId: String? = nil,
-        subId: String? = nil
+        subId: String? = nil,
+        original: ForeignAmount? = nil
     ) {
         self.id = id
         self.kind = kind
         self.amount = amount
         self.currency = currency
+        self.original = original
         self.categoryId = categoryId
         self.intent = intent
         self.note = note
@@ -81,6 +103,7 @@ struct Entry: Codable, Equatable, Sendable, Identifiable {
         try c.encode(kind, forKey: .kind)
         try c.encode(amount, forKey: .amount)
         try c.encode(currency, forKey: .currency)
+        try c.encodeIfPresent(original, forKey: .original)
         try c.encode(categoryId, forKey: .categoryId)
         if let intent { try c.encode(intent, forKey: .intent) } else { try c.encodeNil(forKey: .intent) }
         try c.encode(note, forKey: .note)
@@ -103,6 +126,7 @@ struct EntryPatch: Codable, Equatable, Sendable {
     var kind: EntryKind?
     var amount: Fen?
     var currency: String?
+    var original: ForeignAmount?
     var categoryId: String?
     var intent: Intent?
     var note: String?
@@ -131,11 +155,13 @@ struct EntryPatch: Codable, Equatable, Sendable {
         reviewedAt: Int? = nil,
         deferrals: Int? = nil,
         wishId: String? = nil,
-        subId: String? = nil
+        subId: String? = nil,
+        original: ForeignAmount? = nil
     ) {
         self.kind = kind
         self.amount = amount
         self.currency = currency
+        self.original = original
         self.categoryId = categoryId
         self.intent = intent
         self.note = note
@@ -170,6 +196,7 @@ extension Entry {
         if let v = p.deferrals { e.deferrals = v }
         if let v = p.wishId { e.wishId = v }
         if let v = p.subId { e.subId = v }
+        if let v = p.original { e.original = v }
         return e
     }
 }
@@ -180,9 +207,21 @@ extension Entry {
 struct Correction: Codable, Equatable, Sendable, Identifiable {
     var id: String
     var targetId: String
+    /// The corrected figure in the ledger's currency — what every total uses.
     var amount: Fen
     var reason: String
     var at: Int
+    /// The corrected receipt, when the entry was paid in another currency.
+    var original: ForeignAmount?
+
+    init(id: String, targetId: String, amount: Fen, reason: String, at: Int, original: ForeignAmount? = nil) {
+        self.id = id
+        self.targetId = targetId
+        self.amount = amount
+        self.reason = reason
+        self.at = at
+        self.original = original
+    }
 }
 
 struct Voidance: Codable, Equatable, Sendable, Identifiable {

@@ -85,6 +85,17 @@ db.exec(`
     UNIQUE(user_id, id)
   );
   CREATE INDEX IF NOT EXISTS events_pull ON events(user_id, seq);
+
+  -- Exchange rates, one row per pair and day, so a rate a device asked for is
+  -- the rate every device gets for that day. Public data, no user column.
+  CREATE TABLE IF NOT EXISTS fx_rates (
+    pair        TEXT NOT NULL,
+    day         TEXT NOT NULL,
+    rate_micro  INTEGER NOT NULL,
+    as_of       TEXT NOT NULL,
+    fetched_at  INTEGER NOT NULL,
+    PRIMARY KEY (pair, day)
+  );
 `)
 
 const q = {
@@ -105,6 +116,10 @@ const q = {
   ),
   pull: db.prepare('SELECT seq, id, hlc, body FROM events WHERE user_id = ? AND seq > ? ORDER BY seq LIMIT ?'),
   head: db.prepare('SELECT COALESCE(MAX(seq), 0) AS seq, COUNT(*) AS n FROM events WHERE user_id = ?'),
+  fxGet: db.prepare('SELECT rate_micro, as_of, fetched_at FROM fx_rates WHERE pair = ? AND day = ?'),
+  fxPut: db.prepare(
+    'INSERT INTO fx_rates (pair, day, rate_micro, as_of, fetched_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(pair, day) DO UPDATE SET rate_micro = excluded.rate_micro, as_of = excluded.as_of, fetched_at = excluded.fetched_at',
+  ),
 }
 
 /* ── helpers ─────────────────────────────────────────────────────────── */
@@ -213,6 +228,28 @@ function authenticate(req) {
 
 const isEmail = (s) => typeof s === 'string' && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s) && s.length <= 254
 
+/* ── exchange rates ──────────────────────────────────────────────────── */
+
+// The European Central Bank's daily reference rates, via Frankfurter. One
+// publication a day around 16:00 CET; a weekend or a request made before that
+// hour returns the previous business day and says so in `as_of`. The rate is
+// carried as an integer number of millionths so both clients round the same.
+const FX_UPSTREAM = 'https://api.frankfurter.dev/v1'
+const FX_CURRENCIES = new Set(['CNY', 'USD', 'HKD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'SGD', 'KRW', 'CHF', 'NZD'])
+const FX_STALE_MS = 6 * 3600_000
+const isDay = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s)
+
+async function fetchRate(from, to, day) {
+  const res = await fetch(`${FX_UPSTREAM}/${day}?base=${from}&symbols=${to}`, { signal: AbortSignal.timeout(8000) })
+  if (!res.ok) throw Object.assign(new Error('fx upstream unavailable'), { status: 502 })
+  const body = await res.json()
+  const rate = body && body.rates && body.rates[to]
+  if (typeof rate !== 'number' || !(rate > 0) || !isDay(body.date)) {
+    throw Object.assign(new Error('fx upstream malformed'), { status: 502 })
+  }
+  return { rateMicro: Math.round(rate * 1_000_000), asOf: body.date }
+}
+
 /* ── routes ──────────────────────────────────────────────────────────── */
 
 const routes = {
@@ -261,6 +298,39 @@ const routes = {
     if (!ctx.session) return send(res, 401, { error: 'unauthorised' })
     q.deleteSession.run(ctx.session.token_hash)
     return send(res, 200, { ok: true })
+  },
+
+  /**
+   * Public and cacheable: a rate is not a secret and the app asks for it
+   * before, not after, deciding to record something. A day's rate is final
+   * once the upstream has published that day; until then it is re-asked
+   * every six hours.
+   */
+  'GET /api/fx': async (req, res, ctx) => {
+    const from = String(ctx.url.searchParams.get('from') || '').toUpperCase()
+    const to = String(ctx.url.searchParams.get('to') || '').toUpperCase()
+    const day = ctx.url.searchParams.get('day') || new Date().toISOString().slice(0, 10)
+    if (!FX_CURRENCIES.has(from) || !FX_CURRENCIES.has(to) || !isDay(day)) {
+      return send(res, 400, { error: 'bad_request' })
+    }
+    if (from === to) return send(res, 200, { from, to, day, rateMicro: 1_000_000, asOf: day, source: 'identity' })
+    if (rateLimited(ctx.ip, 120, 10 * 60_000)) return send(res, 429, { error: 'too_many_requests' })
+
+    const pair = `${from}/${to}`
+    const cached = q.fxGet.get(pair, day)
+    const fresh = cached && (cached.as_of === day || now() - cached.fetched_at < FX_STALE_MS)
+    if (fresh) {
+      return send(res, 200, { from, to, day, rateMicro: cached.rate_micro, asOf: cached.as_of, source: 'ecb' })
+    }
+    try {
+      const { rateMicro, asOf } = await fetchRate(from, to, day)
+      q.fxPut.run(pair, day, rateMicro, asOf, now())
+      return send(res, 200, { from, to, day, rateMicro, asOf, source: 'ecb' })
+    } catch (err) {
+      // A stale row beats no row: the client shows it as editable anyway.
+      if (cached) return send(res, 200, { from, to, day, rateMicro: cached.rate_micro, asOf: cached.as_of, source: 'ecb', stale: true })
+      throw err
+    }
   },
 
   'GET /api/me': async (req, res, ctx) => {
@@ -372,6 +442,10 @@ const MIME = {
   '.woff2': 'font/woff2',
   '.ico': 'image/x-icon',
   '.txt': 'text/plain; charset=utf-8',
+  // Over-the-air install of the iOS build (scripts/ios-ota.sh): Safari asks
+  // for the manifest as XML and the package as bytes.
+  '.plist': 'text/xml; charset=utf-8',
+  '.ipa': 'application/octet-stream',
 }
 
 /**
@@ -390,6 +464,16 @@ function serveStatic(req, res, pathname) {
   // Never escape the public root, whatever the request contains.
   if (!file.startsWith(PUBLIC_DIR + path.sep) && file !== PUBLIC_DIR) {
     return send(res, 403, { error: 'forbidden' })
+  }
+
+  // A directory is its index page (the /ota/ install page lives this way);
+  // anything else that is not a file falls through to the app.
+  if (!path.extname(file)) {
+    try {
+      if (fs.statSync(file).isDirectory()) file = path.join(file, 'index.html')
+    } catch {
+      /* not there — handled below */
+    }
   }
 
   fs.stat(file, (err, st) => {

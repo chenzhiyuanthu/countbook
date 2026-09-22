@@ -88,6 +88,7 @@ struct TodayScreen: View {
             .padding(.top, Space.s7)
             .padding(.bottom, Space.s6)
         }
+        .syncRefresh()
         .background(Ink.paper)
         .sheet(isPresented: $capturing) {
             CaptureScreen(onClose: { capturing = false })

@@ -14,6 +14,16 @@ enum Tab: String, CaseIterable, Identifiable {
         case .settings: return .tabSettings
         }
     }
+
+    var glyph: GlyphName {
+        switch self {
+        case .today: return .today
+        case .ledger: return .ledger
+        case .report: return .report
+        case .wants: return .wants
+        case .settings: return .settings
+        }
+    }
 }
 
 extension Tab {
@@ -28,6 +38,16 @@ extension Tab {
         }
         #endif
         return .today
+    }
+
+    /// Likewise `-openCapture 1` raises the capture sheet once the shell is up,
+    /// so the sheet can be looked at without a tap the screenshot run cannot make.
+    static var launchCapturing: Bool {
+        #if DEBUG
+        return UserDefaults.standard.bool(forKey: "openCapture")
+        #else
+        return false
+        #endif
     }
 }
 
@@ -61,9 +81,13 @@ struct RootView: View {
     private var shell: some View {
         screen
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .overlay(alignment: .bottom) { toast }
+            .safeAreaInset(edge: .top, spacing: 0) { SyncMark { tab = .settings } }
             .safeAreaInset(edge: .bottom, spacing: 0) { captureClearance }
             .overlay(alignment: .bottomTrailing) { captureButton }
+            // Same slot as the 记 button, so the two are measured from the same
+            // edge: 16 above the tab bar (DESIGN.md §5.12), or above the button
+            // where there is one.
+            .overlay(alignment: .bottom) { toast }
             .safeAreaInset(edge: .bottom, spacing: 0) { TabBar(tab: $tab) }
             .sheet(isPresented: $capturing) {
                 CaptureScreen(onClose: { capturing = false })
@@ -125,8 +149,7 @@ struct RootView: View {
         if let state = store.toastState {
             ToastBar(state: state)
                 .padding(.horizontal, Layout.gutter)
-                // Clear of the 记 button, which is drawn over the same corner.
-                .padding(.bottom, Space.s4 + Space.s9 + Space.s2 + Space.s4)
+                .padding(.bottom, Space.s4 + (showsCapture ? Space.s9 + Space.s2 + Space.s2 : 0))
                 .transition(.opacity)
                 .id(state.id)
         }
@@ -138,6 +161,18 @@ struct RootView: View {
         store.onLocalWrite = { sync.noteLocalWrite() }
         sync.start()
         offerReckoning()
+        // A sheet presents on a change of state, not on a state it was born
+        // with, so the screenshot flag is applied a frame after the shell exists.
+        if Tab.launchCapturing {
+            try? await Task.sleep(for: .milliseconds(500))
+            capturing = true
+        }
+        #if DEBUG
+        // `-showToast 1`: a save receipt with 撤销, to look at where it lands.
+        if UserDefaults.standard.bool(forKey: "showToast") {
+            store.toast(S.t(.captureSaved), action: ToastAction(label: S.t(.ledgerUndo)) {})
+        }
+        #endif
     }
 
     /// Offered, never forced: it appears on its day and can be dismissed.
@@ -177,12 +212,18 @@ private struct TabBar: View {
         return Button {
             withAnimation(Motion.ease(Motion.stampSlide)) { tab = item }
         } label: {
-            Text(S.t(item.label))
-                .font(.system(size: TypeScale.labelCJK.size, weight: active || alerting(item) ? .semibold : .medium))
-                .kerning(TypeScale.labelCJK.kerning)
-                .foregroundStyle(active || alerting(item) ? Ink.ink900 : Ink.ink500)
-                .padding(.top, Space.s3)
-                .padding(.bottom, Space.s4)
+            // The mark above the word takes the word's ink, a step lighter when
+            // the word is at rest, so it says nothing the word does not.
+            VStack(spacing: Space.s1) {
+                Glyph(name: item.glyph, size: 20)
+                    .foregroundStyle(active || alerting(item) ? Ink.ink900 : Ink.ink300)
+                Text(S.t(item.label))
+                    .font(.system(size: TypeScale.labelCJK.size, weight: active || alerting(item) ? .semibold : .medium))
+                    .kerning(TypeScale.labelCJK.kerning)
+                    .foregroundStyle(active || alerting(item) ? Ink.ink900 : Ink.ink500)
+            }
+                .padding(.top, Space.s2)
+                .padding(.bottom, Space.s3)
                 .overlay(alignment: .top) {
                     if active {
                         Ink.ink900
@@ -239,10 +280,9 @@ private struct ToastBar: View {
             DragGesture(minimumDistance: Space.s6)
                 .onEnded { if $0.translation.height > 0 { store.dismissToast() } }
         )
-        // A toast that carries an action waits for its answer; a toast that only
-        // reports something leaves on its own.
+        // Four seconds whether or not it carries 撤销 (DESIGN.md §5.12): what it
+        // offers is always still reachable from the ledger's own history.
         .task(id: state.id) {
-            guard state.action == nil else { return }
             try? await Task.sleep(for: dwell)
             guard !Task.isCancelled else { return }
             withAnimation(Motion.ease(Motion.rowFade)) { store.dismissToast() }

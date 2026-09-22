@@ -44,6 +44,8 @@ format(fen, currency?) -> string        // '−¥84.20'   (U+2212, exported as M
 formatYuan(fen) -> string               // '¥1,238'    (no 分, for chart labels)
 parse(input) -> Fen | null
 divideRemainderLast(total, n) -> { per, last }
+convert(amountMinor, rateMicro) -> Fen   // foreign minor units → home 分, rate in millionths, half away from zero (BigInt)
+formatRate(rateMicro) -> string          // '7.1234'; parseRate(input) -> rateMicro | null; RATE_SCALE = 1_000_000
 
 // date.ts   Day = 'YYYY-MM-DD', Month = 'YYYY-MM' — always local civil dates
 toDay(Date) fromDay(Day) monthOf(Day) daysInMonth(Month) dayOfMonth(Month, n)
@@ -54,6 +56,7 @@ lastNDays(Day, n)
 // types.ts
 Intent = 'need' | 'want' | 'impulse'    // 必要 / 想要 / 冲动
 Entry Category Wish Sub SubStatus StandardRevision Settings Ledger Correction Voidance
+ForeignAmount = { currency, amount, rateMicro }   // Entry.original — the receipt; Entry.amount is always the home-currency conversion
 
 // compute.ts — every formula the product prints
 available(L, today, nowMs) -> { perDay, standard, spent, fixedRemaining, remaining, daysLeft, recoveryDays }
@@ -73,6 +76,7 @@ hourScatter(L, today, days?) -> { hour, count, sum }[]
 regretAsWishObject(L, regretYear) -> { name, fraction } | null
 proposeStandard(L, today) -> { monthlyFen, perCategory } | null
 reckoningQueue(L, today, maxCards?) -> EffectiveEntry[]
+cashflowOfMonth(L, month) / cashflowOfYear(L, year) -> { income, spend, net, incomeByCategory }  // income never enters available()
 effective(L) -> Map<id, EffectiveEntry>   // EffectiveEntry = Entry & { effective, correction?, voidance? }
 standardAt(L, atMs) -> { monthlyFen, perCategory }
 ```
@@ -97,9 +101,24 @@ const { ready, ledger, events, today, now, t, locale,
 ### `web/src/app/sync.tsx`
 
 ```ts
-const { phase, config, fingerprint, message, lastSyncedAt,
-        connectGitHub, connectServer, unlock, disconnect, syncNow } = useSync()
+const { phase, config, fingerprint, message, authExpired, pending, lastSyncedAt,
+        connectGitHub, connectServer, unlock, disconnect, syncNow, resync } = useSync()
 // phase: 'off' | 'locked' | 'idle' | 'syncing' | 'offline' | 'error'
+// authExpired: the server rejected our token — show the password form, not a retry
+// pending: local writes not yet confirmed by the remote (drives ui/SyncMark.tsx)
+// resync: forget the pull cursor and read the whole log again (ui/PullToSync.tsx; iOS `.syncRefresh()`)
+// The server cursor advances only over rows actually pulled — never from a push reply — and
+// the service worker never touches /api/ (sync/server.ts, scripts/gen-sw.mjs, server.test.ts).
+```
+
+### `web/src/sync/fx.ts`
+
+```ts
+CURRENCIES = ['CNY', 'USD', 'HKD', 'EUR', 'GBP', 'JPY']
+fetchRate(from, to, day, baseUrl?) -> Promise<{ rateMicro, asOf, source: 'ecb' | 'identity' | 'remembered' } | null>
+rememberRate(from, to, rateMicro)   // last rate written into an entry; the offline fallback
+// The server's GET /api/fx?from=USD&to=CNY&day=YYYY-MM-DD serves ECB reference rates (Frankfurter),
+// cached per pair and day in SQLite. Public, no auth. iOS mirror: ios/Countbook/Sync/FX.swift.
 ```
 
 ### `web/src/app/i18n.ts`

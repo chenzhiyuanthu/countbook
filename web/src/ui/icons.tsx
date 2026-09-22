@@ -1,14 +1,17 @@
 /**
  * The whole icon set, drawn by hand. There is no icon library, no icon font and
  * no network request in this product, so every glyph in the app is one of the
- * fourteen below (DESIGN.md §8.3) and a fifteenth needs an amendment to that
- * document, not a new file here.
+ * fourteen below (DESIGN.md §8.3) or one of the ornaments at the end of this
+ * file (§8.4, drawn from design/icons.json); anything else needs an amendment
+ * to that document, not a new file here.
  *
  * Construction (DESIGN.md §8.2): a 24 grid with a 20 live area, stroke 1.5,
  * butt caps, mitred joins, every coordinate on the 0.5 grid so the stroke lands
  * on pixel boundaries at 1×. Colour is never set — an icon takes the ink of
  * whatever it sits in.
  */
+
+import ornaments from '../../../design/icons.json'
 
 const VIEW_BOX = '0 0 24 24'
 
@@ -116,3 +119,53 @@ export const Minus = ({ size }: IconProps) => <Icon name="minus" size={size} />
 export const TrayArrowDown = ({ size }: IconProps) => <Icon name="tray.arrow.down" size={size} />
 export const SquareAndArrowUp = ({ size }: IconProps) => <Icon name="square.and.arrow.up" size={size} />
 export const ExclamationMark = ({ size }: IconProps) => <Icon name="exclamationmark" size={size} />
+
+/* ── ornaments ───────────────────────────────────────────────────────── */
+
+/**
+ * The second, decorative set (DESIGN.md §8.4): a mark beside a word, never a
+ * word's replacement. It is drawn from design/icons.json — the one file both
+ * clients read — with the same grid, stroke and caps as the set above, and it
+ * appears in exactly two places: the tab bar, and a section's title. Colour is
+ * never set; the mark takes the ink of the word it sits beside.
+ */
+export type GlyphName = keyof typeof ornaments.glyphs
+
+interface GlyphDrawing {
+  readonly stroke?: readonly string[]
+  readonly circles?: readonly { readonly cx: number; readonly cy: number; readonly r: number }[]
+  readonly dots?: readonly { readonly x: number; readonly y: number }[]
+}
+
+export function Glyph({ name, size = 16 }: { name: GlyphName; size?: number }) {
+  const d = ornaments.glyphs[name] as GlyphDrawing
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={VIEW_BOX}
+      aria-hidden="true"
+      focusable="false"
+      style={{ display: 'block', flex: 'none' }}
+    >
+      {d.stroke?.map((p) => (
+        <path
+          key={p}
+          d={p}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={ornaments.stroke}
+          strokeLinecap="butt"
+          strokeLinejoin="miter"
+          strokeMiterlimit={4}
+        />
+      ))}
+      {d.circles?.map((c) => (
+        <circle key={`${c.cx}-${c.cy}-${c.r}`} cx={c.cx} cy={c.cy} r={c.r} fill="none" stroke="currentColor" strokeWidth={ornaments.stroke} />
+      ))}
+      {d.dots?.map((dot) => (
+        <rect key={`${dot.x}-${dot.y}`} x={dot.x} y={dot.y} width={ornaments.dot} height={ornaments.dot} fill="currentColor" />
+      ))}
+    </svg>
+  )
+}

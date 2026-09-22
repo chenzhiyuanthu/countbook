@@ -1,0 +1,86 @@
+{
+  "$doc": "Shared acceptance vectors for foreign-currency conversion. amount is minor units of the foreign currency, rateMicro is home-per-unit in millionths, out is the home-currency 分. Rounding is half away from zero. Both clients must agree byte for byte.",
+  "convert": [
+    {
+      "amount": 120000,
+      "rateMicro": 7123400,
+      "out": 854808
+    },
+    {
+      "amount": 1,
+      "rateMicro": 7123400,
+      "out": 7
+    },
+    {
+      "amount": 5,
+      "rateMicro": 100000,
+      "out": 1
+    },
+    {
+      "amount": 15,
+      "rateMicro": 100000,
+      "out": 2
+    },
+    {
+      "amount": 14,
+      "rateMicro": 100000,
+      "out": 1
+    },
+    {
+      "amount": 100,
+      "rateMicro": 43123,
+      "out": 4
+    },
+    {
+      "amount": 99999999,
+      "rateMicro": 155690000,
+      "out": 15568999844
+    },
+    {
+      "amount": 99999999,
+      "rateMicro": 1,
+      "out": 100
+    },
+    {
+      "amount": 0,
+      "rateMicro": 7123400,
+      "out": 0
+    },
+    {
+      "amount": -120000,
+      "rateMicro": 7123400,
+      "out": -854808
+    },
+    {
+      "amount": 250000,
+      "rateMicro": 6707500,
+      "out": 1676875
+    }
+  ],
+  "formatRate": [
+    {
+      "rateMicro": 7123400,
+      "out": "7.1234"
+    },
+    {
+      "rateMicro": 6707500,
+      "out": "6.7075"
+    },
+    {
+      "rateMicro": 7000000,
+      "out": "7.00"
+    },
+    {
+      "rateMicro": 7100000,
+      "out": "7.10"
+    },
+    {
+      "rateMicro": 43123,
+      "out": "0.0431"
+    },
+    {
+      "rateMicro": 155690000,
+      "out": "155.69"
+    }
+  ]
+}

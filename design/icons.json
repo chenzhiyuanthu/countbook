@@ -1,0 +1,69 @@
+{
+  "$doc": "The ornament set (DESIGN.md §8.4): line glyphs on a 24 grid with a 20 live area, stroke 1.5, butt caps, mitred joins, every coordinate on the 0.5 grid. Paths use absolute M L H V Z only, so the Swift reader stays small; `circles` are stroked, `dots` are the only filled marks. Both clients draw from this file; an icon that is not here does not exist.",
+  "stroke": 1.5,
+  "dot": 2,
+  "glyphs": {
+    "today": {
+      "stroke": ["M4 6.5 H20 V20 H4 Z", "M4 10.5 H20", "M8 4 V8", "M16 4 V8"],
+      "dots": [{ "x": 11, "y": 14 }]
+    },
+    "ledger": {
+      "stroke": ["M5 6.5 H19", "M5 12 H19", "M5 17.5 H13"]
+    },
+    "report": {
+      "stroke": ["M5.5 19 V13", "M12 19 V6", "M18.5 19 V10", "M3 20.5 H21"]
+    },
+    "wants": {
+      "stroke": ["M7 4 H17 V6.5 L12 12 L7 6.5 Z", "M7 20 H17 V17.5 L12 12 L7 17.5 Z"]
+    },
+    "settings": {
+      "stroke": ["M4 8 H20", "M15 5.5 V10.5", "M4 16 H20", "M9 13.5 V18.5"]
+    },
+
+    "standard": {
+      "stroke": ["M4 12 H20", "M4 8.5 V15.5", "M20 8.5 V15.5"]
+    },
+    "wish": {
+      "stroke": ["M12 4 L20 10 L12 20 L4 10 Z", "M4 10 H20"]
+    },
+    "sync": {
+      "stroke": ["M6 14.5 V9 H16", "M13 6 L16 9 L13 12", "M18 9.5 V15 H8", "M11 12 L8 15 L11 18"]
+    },
+    "categories": {
+      "stroke": ["M4 4 H10 V10 H4 Z", "M14 4 H20 V10 H14 Z", "M4 14 H10 V20 H4 Z", "M14 14 H20 V20 H14 Z"]
+    },
+    "appearance": {
+      "circles": [{ "cx": 12, "cy": 12, "r": 7 }],
+      "stroke": ["M12 5 V19"]
+    },
+    "data": {
+      "stroke": ["M4 14 V19 H20 V14", "M12 5 L12 14", "M8.5 10.5 L12 14 L15.5 10.5"]
+    },
+    "about": {
+      "circles": [{ "cx": 12, "cy": 12, "r": 8 }],
+      "stroke": ["M12 11 V16.5"],
+      "dots": [{ "x": 11, "y": 7 }]
+    },
+
+    "cashflow": {
+      "stroke": ["M8 19 V5", "M5 8 L8 5 L11 8", "M16 5 V19", "M13 16 L16 19 L19 16"]
+    },
+    "regret": {
+      "circles": [{ "cx": 12, "cy": 12, "r": 8 }],
+      "stroke": ["M8 12 H16"]
+    },
+    "deviation": {
+      "stroke": ["M12 4 V20", "M12 8 H18", "M12 12 H7", "M12 16 H16"]
+    },
+    "rate": {
+      "stroke": ["M5 12.5 L10 17.5 L19.5 6.5"]
+    },
+    "hours": {
+      "circles": [{ "cx": 12, "cy": 12, "r": 8 }],
+      "stroke": ["M12 7 V12 H15.5"]
+    },
+    "year": {
+      "stroke": ["M4 6.5 H20 V20 H4 Z", "M4 10.5 H20", "M8 4 V8", "M16 4 V8"]
+    }
+  }
+}

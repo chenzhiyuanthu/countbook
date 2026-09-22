@@ -9,7 +9,7 @@ import { effective, standardAt } from '../core/compute'
 import type { EffectiveEntry } from '../core/compute'
 import { dayOfMonth, daysInMonth, fromDay, monthOf, weekdayOf } from '../core/date'
 import type { Day, Month } from '../core/date'
-import { format, parse } from '../core/money'
+import { convert, format, formatRate, parse, parseRate } from '../core/money'
 import type { Fen } from '../core/money'
 import type { Correction, Intent } from '../core/types'
 import './Ledger.css'
@@ -493,6 +493,15 @@ function LedgerRow({
   const voided = entry.voidance !== undefined
   const intent = entry.intent
   const lines = correctionLines(t, entry, corrections)
+  // The receipt: what actually changed hands when that was not in the
+  // ledger's currency. Printed beneath the row like a correction is — a fact
+  // about the figure above, never a second figure to add up.
+  const original = entry.original
+    ? t('ledger.original', {
+        amount: format(entry.original.amount, entry.original.currency),
+        rate: formatRate(entry.original.rateMicro),
+      })
+    : ''
 
   // One accessibility element per record: the corrections belong to the row
   // that they correct, not to a second thing to arrow past.
@@ -502,6 +511,7 @@ function LedgerRow({
     entry.note || entry.merchant,
     intent ? t(INTENT_KEY[intent]) : '',
     MoneyText(voided ? entry.amount : entry.effective, entry.currency),
+    original,
     lines[lines.length - 1]?.line ?? '',
     entry.voidance ? t('ledger.voided', { reason: entry.voidance.reason }) : '',
   ]
@@ -529,6 +539,7 @@ function LedgerRow({
           />
         </span>
       </button>
+      {original ? <p className="t-mono ink-500 ledger__sub" aria-hidden="true">{original}</p> : null}
       {lines.map((l) => (
         <p key={l.id} className="t-mono ink-500 ledger__sub" aria-hidden="true">{l.line}</p>
       ))}
@@ -554,20 +565,42 @@ function EntryDetail({
 }) {
   const { t, ledger, today, commit, undo, toast, locale } = useStore()
 
-  const [amount, setAmount] = useState(() => (entry.amount / 100).toFixed(2))
+  // A receipt in another currency is edited as that receipt: the figure the
+  // person actually paid, and the rate. The ledger's own figure is derived,
+  // shown, and never typed over — it is a conversion, not a fact.
+  const receipt = entry.original
+  const currency = entry.currency
+  const keyedCurrency = receipt?.currency ?? currency
+  // An investment result carries a sign; the field holds the magnitude and the
+  // 盈利 / 亏损 switch holds the sign, because a keypad has no minus.
+  const investment = entry.kind === 'income'
+  const [loss, setLoss] = useState(investment && entry.amount < 0)
+  const [correctLoss, setCorrectLoss] = useState(investment && entry.effective < 0)
+  const sign = investment && loss ? -1 : 1
+  const correctSign = investment && correctLoss ? -1 : 1
+  const [amount, setAmount] = useState(() => (Math.abs(receipt?.amount ?? entry.amount) / 100).toFixed(2))
+  const [rate, setRate] = useState(() => (receipt ? formatRate(receipt.rateMicro) : ''))
   const [note, setNote] = useState(entry.note)
   const [day, setDay] = useState<Day>(entry.day)
   const [intent, setIntent] = useState<Intent | null>(entry.intent)
   const [categoryId, setCategoryId] = useState(entry.categoryId)
 
-  const [correctTo, setCorrectTo] = useState(() => (entry.effective / 100).toFixed(2))
+  const [correctTo, setCorrectTo] = useState(() => (Math.abs(receipt?.amount ?? entry.effective) / 100).toFixed(2))
+  const [correctRate, setCorrectRate] = useState(() => (receipt ? formatRate(receipt.rateMicro) : ''))
   const [reason, setReason] = useState('')
   const [voiding, setVoiding] = useState(false)
   const [voidReason, setVoidReason] = useState('')
 
-  const currency = entry.currency
-  const parsedAmount = parse(amount)
-  const parsedCorrection = parse(correctTo)
+  const parsedRate = receipt ? parseRate(rate) : null
+  const parsedCorrectRate = receipt ? parseRate(correctRate) : null
+  /** What was typed, in minor units of the currency it was typed in. */
+  const keyed = parse(amount)
+  const keyedCorrection = parse(correctTo)
+  /** The same in the ledger's currency — what is stored as `amount`. */
+  const parsedAmount = receipt ? (keyed !== null && parsedRate ? convert(keyed, parsedRate) : null) : keyed
+  const parsedCorrection = receipt
+    ? (keyedCorrection !== null && parsedCorrectRate ? convert(keyedCorrection, parsedCorrectRate) : null)
+    : keyedCorrection
   const dayIntoSealed = isSealed(monthOf(day), today)
 
   const categories = useMemo(
@@ -582,7 +615,12 @@ function EntryDetail({
     commit({
       t: 'entry.patch',
       target: entry.id,
-      patch: { amount: parsedAmount, note, day, intent, categoryId },
+      patch: {
+        amount: sign * parsedAmount, note, day, intent, categoryId,
+        ...(receipt && keyed !== null && parsedRate
+          ? { original: { currency: receipt.currency, amount: sign * keyed, rateMicro: parsedRate } }
+          : {}),
+      },
     })
     onClose()
   }
@@ -595,7 +633,15 @@ function EntryDetail({
 
   const correct = () => {
     if (parsedCorrection === null || reason.trim().length < 2) return
-    commit({ t: 'entry.correct', target: entry.id, amount: parsedCorrection, reason: reason.trim() })
+    commit({
+      t: 'entry.correct',
+      target: entry.id,
+      amount: correctSign * parsedCorrection,
+      reason: reason.trim(),
+      ...(receipt && keyedCorrection !== null && parsedCorrectRate
+        ? { original: { currency: receipt.currency, amount: correctSign * keyedCorrection, rateMicro: parsedCorrectRate } }
+        : {}),
+    })
     onPrinted()
     onClose()
   }
@@ -621,12 +667,21 @@ function EntryDetail({
       <div className="ledger__detail">
         <div className="ledger__detail-figure">
           <Money
-            fen={sealed ? entry.effective : (parsedAmount ?? entry.amount)}
+            fen={
+              receipt
+                ? (sealed ? receipt.amount : sign * (keyed ?? Math.abs(receipt.amount)))
+                : sealed ? entry.effective : sign * (parsedAmount ?? Math.abs(entry.amount))
+            }
             size="screen"
             role={entry.kind === 'income' ? 'credit' : 'debit'}
-            currency={currency}
+            currency={keyedCurrency}
           />
         </div>
+        {receipt ? (
+          <p className="t-mono ink-500 ledger__detail-meta">
+            {t('entry.inHome', { amount: format(sealed ? entry.effective : sign * (parsedAmount ?? Math.abs(entry.amount)), currency) })}
+          </p>
+        ) : null}
         <p className="t-body ink-700 ledger__detail-line">
           {categoryName}
           {entry.note ? ` · ${entry.note}` : ''}
@@ -643,13 +698,38 @@ function EntryDetail({
 
         {sealed ? (
           <>
+            {investment ? (
+              <Segmented
+                ariaLabel={t('capture.result')}
+                value={correctLoss ? 'loss' : 'gain'}
+                onChange={(v) => setCorrectLoss(v === 'loss')}
+                options={[
+                  { value: 'gain', label: t('capture.gain') },
+                  { value: 'loss', label: t('capture.loss') },
+                ]}
+              />
+            ) : null}
             <Field
-              label={t('entry.correctAmount')}
+              label={receipt ? `${t('entry.correctAmount')} · ${keyedCurrency}` : t('entry.correctAmount')}
               value={correctTo}
               onChange={setCorrectTo}
               mono
               inputMode="decimal"
             />
+            {receipt ? (
+              <Field
+                label={t('entry.rate')}
+                value={correctRate}
+                onChange={setCorrectRate}
+                mono
+                inputMode="decimal"
+                suffix={
+                  <span className="t-mono ink-500">
+                    {parsedCorrection !== null ? format(correctSign * parsedCorrection, currency) : ''}
+                  </span>
+                }
+              />
+            ) : null}
             <Field
               label={t('entry.reasonLabel')}
               value={reason}
@@ -694,13 +774,36 @@ function EntryDetail({
           </>
         ) : (
           <>
+            {investment ? (
+              <Segmented
+                ariaLabel={t('capture.result')}
+                value={loss ? 'loss' : 'gain'}
+                onChange={(v) => setLoss(v === 'loss')}
+                options={[
+                  { value: 'gain', label: t('capture.gain') },
+                  { value: 'loss', label: t('capture.loss') },
+                ]}
+              />
+            ) : null}
             <Field
-              label={t('entry.amountLabel')}
+              label={receipt ? `${t('entry.amountLabel')} · ${keyedCurrency}` : t('entry.amountLabel')}
               value={amount}
               onChange={setAmount}
               mono
               inputMode="decimal"
             />
+            {receipt ? (
+              <Field
+                label={t('entry.rate')}
+                value={rate}
+                onChange={setRate}
+                mono
+                inputMode="decimal"
+                suffix={
+                  <span className="t-mono ink-500">{parsedAmount !== null ? format(sign * parsedAmount, currency) : ''}</span>
+                }
+              />
+            ) : null}
             <div className="ledger__pick">
               <span className="t-label t-label--cjk ledger__pick-label">{t('capture.category')}</span>
               <div className="ledger__pick-words">

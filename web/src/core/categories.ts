@@ -20,12 +20,17 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'sub', name: '订阅', nameEn: 'Subs', kind: 'spend', order: 11 },
   { id: 'other', name: '其他', nameEn: 'Other', kind: 'spend', order: 12 },
 
-  { id: 'salary', name: '工资', nameEn: 'Salary', kind: 'income', order: 0 },
-  { id: 'bonus', name: '奖金', nameEn: 'Bonus', kind: 'income', order: 1 },
-  { id: 'invest', name: '投资', nameEn: 'Investment', kind: 'income', order: 2 },
-  { id: 'side', name: '兼职', nameEn: 'Side work', kind: 'income', order: 3 },
-  { id: 'gift', name: '红包', nameEn: 'Gift', kind: 'income', order: 4 },
-  { id: 'other-in', name: '其他', nameEn: 'Other', kind: 'income', order: 5 },
+  // 投资 — the second kind of entry is an investment result, gain or loss.
+  { id: 'stock', name: '股票', nameEn: 'Stocks', kind: 'income', order: 0 },
+  { id: 'fund', name: '基金', nameEn: 'Funds', kind: 'income', order: 1 },
+  { id: 'wealth', name: '理财', nameEn: 'Wealth products', kind: 'income', order: 2 },
+  { id: 'other-in', name: '其他', nameEn: 'Other', kind: 'income', order: 3 },
+  // The earlier income set is kept only so a row filed under it keeps its label.
+  { id: 'salary', name: '工资', nameEn: 'Salary', kind: 'income', order: 10, archived: true },
+  { id: 'bonus', name: '奖金', nameEn: 'Bonus', kind: 'income', order: 11, archived: true },
+  { id: 'invest', name: '投资', nameEn: 'Investment', kind: 'income', order: 12, archived: true },
+  { id: 'side', name: '兼职', nameEn: 'Side work', kind: 'income', order: 13, archived: true },
+  { id: 'gift', name: '红包', nameEn: 'Gift', kind: 'income', order: 14, archived: true },
 ]
 
 export const DEFAULT_SETTINGS = {

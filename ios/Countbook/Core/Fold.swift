@@ -38,9 +38,10 @@ func fold(_ events: [Event]) -> Ledger {
             L.entries[target] = nil
             L.tombstones.insert(target)
 
-        case .entryCorrect(let target, let amount, let reason):
+        case .entryCorrect(let target, let amount, let reason, let original):
             L.corrections.append(
-                Correction(id: e.id, targetId: target, amount: amount, reason: reason, at: decode(e.hlc).wall)
+                Correction(id: e.id, targetId: target, amount: amount, reason: reason, at: decode(e.hlc).wall,
+                           original: original)
             )
 
         case .entryVoid(let target, let reason):
@@ -173,8 +174,12 @@ func effective(_ L: Ledger) -> [String: EffectiveEntry] {
     for (id, e) in L.entries {
         let c = latestCorrection[id]
         let v = voided[id]
+        // The receipt follows the correction: what was actually paid is a fact
+        // about the corrected figure, not the original one.
+        var shown = e
+        if let receipt = c?.original { shown.original = receipt }
         out[id] = EffectiveEntry(
-            entry: e,
+            entry: shown,
             effective: v != nil ? 0 : (c?.amount ?? e.amount),
             correction: c,
             voidance: v

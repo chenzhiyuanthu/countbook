@@ -42,6 +42,40 @@
   gap: var(--s-2);
 }
 
+/* ── 收支 ──────────────────────────────────────────────────────────────── */
+
+.report__sources {
+  margin: 0;
+  padding-top: var(--s-4);
+}
+.report__sourcesLabel { padding-bottom: var(--s-2); }
+.report__source {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  min-height: var(--s-7);
+}
+.report__source dd { margin: 0; }
+
+/* The year's three figures wrap as whole items, never inside a figure. */
+.report__yearFlow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--s-5);
+  row-gap: var(--s-1);
+  margin: 0;
+  padding-top: var(--s-4);
+}
+.report__yearItem {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  white-space: nowrap;
+}
+.report__yearItem dd { margin: 0; }
+
 .report__wish {
   display: flex;
   flex-direction: column;
@@ -139,3 +173,11 @@
     border-top-width: 0.5px;
   }
 }
+
+/* A section's mark sits before its title, in the title's own grey. */
+.report__title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.report__glyph { color: var(--c-ink500); display: inline-flex; }

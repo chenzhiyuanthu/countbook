@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import fixtures from '../../../design/fixtures/money.json'
-import { format, parse, parts, divideRemainderLast, MINUS } from './money'
+import fx from '../../../design/fixtures/fx.json'
+import { convert, format, formatRate, parse, parseRate, parts, divideRemainderLast, MINUS } from './money'
 import { addDays, allDaysOf, daysInMonth, daysRemainingInMonth, diffDays, monthOf, toDay } from './date'
 import { Clock, compare, decode, encode } from './hlc'
 import { fold, effective } from './fold'
 import { merge, sort, type Event, type Payload } from './events'
-import { available, coolingDays, detectRecurring, leak, median, regret, stddev, streak, monthStrip } from './compute'
+import {
+  available, cashflowOfMonth, cashflowOfYear, coolingDays, detectRecurring, leak, median, regret, stddev, streak,
+  monthStrip,
+} from './compute'
 import type { Entry } from './types'
 
 /* ── money ───────────────────────────────────────────────────────────── */
@@ -26,6 +30,21 @@ describe('money', () => {
 
   it('round-trips parse and format without drift', () => {
     for (let fen = -50_000; fen < 50_000; fen += 337) expect(parse(format(fen).replace(MINUS, '-'))).toBe(fen)
+  })
+
+  it('converts foreign minor units at a rate in millionths, identically to the Swift client', () => {
+    for (const f of fx.convert) expect(convert(f.amount, f.rateMicro)).toBe(f.out)
+    for (const f of fx.formatRate) expect(formatRate(f.rateMicro)).toBe(f.out)
+  })
+
+  it('parses a typed rate and rejects what is not one', () => {
+    expect(parseRate('7.1234')).toBe(7_123_400)
+    expect(parseRate('0.0431')).toBe(43_100)
+    expect(parseRate('7')).toBe(7_000_000)
+    expect(parseRate('0')).toBeNull()
+    expect(parseRate('')).toBeNull()
+    expect(parseRate('7,1')).toBeNull()
+    expect(parseRate('-1')).toBeNull()
   })
 
   it('never loses a fen when dividing across days', () => {
@@ -234,6 +253,76 @@ describe('今日可用', () => {
       }),
     ])
     expect(available(L, '2026-09-20', Date.parse('2026-09-20T12:00:00')).fixedRemaining).toBe(5_000)
+  })
+})
+
+describe('收支', () => {
+  const L = ledgerWith([
+    entry({ id: 'a', amount: 30_000, day: '2026-09-03' }),
+    entry({ id: 'b', amount: 20_000, day: '2026-09-15' }),
+    entry({ id: 'c', amount: 50_000, day: '2026-08-15' }),
+    entry({
+      id: 'i1', kind: 'income', intent: null, categoryId: 'stock', day: '2026-09-10',
+      amount: 854_808, original: { currency: 'USD', amount: 120_000, rateMicro: 7_123_400 },
+    }),
+    entry({ id: 'i2', kind: 'income', intent: null, categoryId: 'salary', amount: 1_000_000, day: '2026-09-01' }),
+    entry({ id: 'i3', kind: 'income', intent: null, categoryId: 'stock', amount: 10_000, day: '2026-08-02' }),
+  ])
+
+  it('totals income, spending and the difference in the home currency', () => {
+    const m = cashflowOfMonth(L, '2026-09')
+    expect(m.income).toBe(1_854_808)
+    expect(m.spend).toBe(50_000)
+    expect(m.net).toBe(1_804_808)
+    expect(m.incomeByCategory).toEqual([
+      { categoryId: 'salary', amount: 1_000_000, count: 1 },
+      { categoryId: 'stock', amount: 854_808, count: 1 },
+    ])
+  })
+
+  it('sums the year and keeps income out of 今日可用', () => {
+    const y = cashflowOfYear(L, '2026')
+    expect(y.income).toBe(1_864_808)
+    expect(y.spend).toBe(100_000)
+    expect(y.net).toBe(1_764_808)
+    expect(available(L, '2026-09-20', Date.parse('2026-09-20T12:00:00')).spent).toBe(50_000)
+  })
+
+  it('carries the foreign receipt through the fold untouched', () => {
+    expect(L.entries.get('i1')?.original).toEqual({ currency: 'USD', amount: 120_000, rateMicro: 7_123_400 })
+  })
+
+  it('counts a loss as a negative result, never as spending', () => {
+    const lossy = ledgerWith([
+      entry({ id: 'g', kind: 'income', intent: null, categoryId: 'stock', amount: 50_000, day: '2026-09-02' }),
+      entry({ id: 'l', kind: 'income', intent: null, categoryId: 'fund', amount: -80_000, day: '2026-09-03' }),
+      entry({ id: 's', amount: 10_000, day: '2026-09-04' }),
+    ])
+    const m = cashflowOfMonth(lossy, '2026-09')
+    expect(m.income).toBe(-30_000)
+    expect(m.spend).toBe(10_000)
+    expect(m.net).toBe(-40_000)
+    expect(m.incomeByCategory.map((r) => [r.categoryId, r.amount])).toEqual([['stock', 50_000], ['fund', -80_000]])
+    expect(available(lossy, '2026-09-20', Date.parse('2026-09-20T12:00:00')).spent).toBe(10_000)
+  })
+
+  it('lets a correction restate the receipt, and the figure follows it', () => {
+    const corrected = fold([
+      ev('s', H(1), { t: 'standard.set', monthlyFen: 800_000, perCategory: {} }),
+      ev('a', H(2), { t: 'entry.add', entry: entry({
+        id: 'x', kind: 'income', intent: null, categoryId: 'stock', day: '2026-08-10',
+        amount: 854_808, original: { currency: 'USD', amount: 120_000, rateMicro: 7_123_400 },
+      }) }),
+      ev('c', H(3), {
+        t: 'entry.correct', target: 'x', amount: 890_425, reason: '券商汇率',
+        original: { currency: 'USD', amount: 125_000, rateMicro: 7_123_400 },
+      }),
+    ])
+    const x = effective(corrected).get('x')!
+    expect(x.effective).toBe(890_425)
+    expect(x.original).toEqual({ currency: 'USD', amount: 125_000, rateMicro: 7_123_400 })
+    expect(corrected.entries.get('x')?.original?.amount).toBe(120_000) // the row as first printed
+    expect(cashflowOfMonth(corrected, '2026-08').income).toBe(890_425)
   })
 })
 

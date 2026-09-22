@@ -17,6 +17,11 @@ let uncachedSession: URLSession = {
 /// inserts nothing twice. Each event body is sealed individually, so the server
 /// stores ciphertext and operating it grants no ability to read the ledger.
 
+/// The sync server this build points at by default, so signing in is just an
+/// email and a password. Mirrors web/src/sync/config.ts. The exchange-rate
+/// endpoint is asked of the same box, signed in or not.
+let defaultServerURL = "https://countbook.chenzhiyuanthu.com"
+
 struct ServerConfig: Codable, Equatable, Sendable {
     var baseUrl: String
     var token: String
@@ -183,26 +188,34 @@ enum ServerStore {
         var merged = local
         var pulled = 0
 
-        while true {
-            let page: PullPage = try await call(cfg, "/api/pull?since=\(at)&limit=\(pageSize)")
-            var decoded: [Event] = []
-            for row in page.events where row.id != manifestEventID {
-                guard let envelope = fromBase64(row.body),
-                      let plain = try? open(vk, envelope),
-                      let event = try? JSONDecoder().decode(Event.self, from: Data(plain.utf8))
-                else {
-                    // One unreadable row must not stop the sync: it is far more likely to be
-                    // an event written under a different passphrase than a real corruption,
-                    // and the rest of the log is still perfectly usable.
-                    continue
+        // The cursor moves only over rows this device has actually read. The
+        // push reply also names the server's head, but taking that would skip
+        // whatever another device inserted between this pull and this push —
+        // and a skipped row is never asked for again.
+        func pull() async throws {
+            while true {
+                let page: PullPage = try await call(cfg, "/api/pull?since=\(at)&limit=\(pageSize)")
+                var decoded: [Event] = []
+                for row in page.events where row.id != manifestEventID {
+                    guard let envelope = fromBase64(row.body),
+                          let plain = try? open(vk, envelope),
+                          let event = try? JSONDecoder().decode(Event.self, from: Data(plain.utf8))
+                    else {
+                        // One unreadable row must not stop the sync: it is far more likely to be
+                        // an event written under a different passphrase than a real corruption,
+                        // and the rest of the log is still perfectly usable.
+                        continue
+                    }
+                    decoded.append(event)
                 }
-                decoded.append(event)
+                pulled += decoded.count
+                merged = merge(merged, decoded)
+                at = page.cursor
+                if page.hasMore != true { break }
             }
-            pulled += decoded.count
-            merged = merge(merged, decoded)
-            at = page.cursor
-            if page.hasMore != true { break }
         }
+
+        try await pull()
 
         // Push everything we hold; the server discards ids it already has, so there
         // is no need to track which of ours it has seen.
@@ -223,8 +236,11 @@ enum ServerStore {
                 cfg, "/api/push", method: "POST", body: try json(["events": slice])
             )
             pushed += ack.accepted
-            at = max(at, ack.cursor)
         }
+
+        // Read past our own rows now rather than next time, and catch anything
+        // that landed while we were pushing.
+        if pushed > 0 { try await pull() }
 
         return (merged, ServerCursor(cursor: at), pulled, pushed)
     }

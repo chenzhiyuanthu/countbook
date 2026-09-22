@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../app/store'
+import { useSync } from '../app/sync'
 import { WEEKDAYS } from '../app/i18n'
 import { Button, Field, Rule, Segmented, Sheet } from '../ui/primitives'
 import { Money } from '../ui/Money'
 import { ChevronDown, ChevronUp, DeleteBackward } from '../ui/icons'
 import { available, coolingDays, commitWarning } from '../core/compute'
 import { addDays, weekdayOf } from '../core/date'
-import { parse } from '../core/money'
+import { convert, formatRate, parse, parseRate } from '../core/money'
 import { newId } from '../core/id'
-import type { Entry, Intent } from '../core/types'
+import type { Entry, EntryKind, Intent } from '../core/types'
+import { DEFAULT_SERVER_URL } from '../sync/config'
+import { CURRENCIES, fetchRate, rememberRate, type Rate } from '../sync/fx'
 import './Capture.css'
 
 /**
@@ -33,7 +36,11 @@ interface Keyed {
 
 export default function Capture({ onClose }: { onClose(): void }) {
   const { ledger, today, now, t, locale, commit, undo, toast } = useStore()
+  const { config: syncConfig } = useSync()
 
+  const [kind, setKind] = useState<EntryKind>('spend')
+  /** 盈利 / 亏损 — an investment result has a sign; a purchase does not. */
+  const [loss, setLoss] = useState(false)
   const [amount, setAmount] = useState<Keyed>({ int: '0', frac: '', inFrac: false })
   const [categoryId, setCategoryId] = useState<string | null>(null)
   const [intent, setIntent] = useState<Intent | null>(null)
@@ -45,32 +52,75 @@ export default function Capture({ onClose }: { onClose(): void }) {
   const [fieldsOpen, setFieldsOpen] = useState(false)
   const [override, setOverride] = useState(false)
 
-  const amountFen = useMemo(
+  const settings = ledger.settings
+  const home = settings.currency
+
+  // ── the currency the figure is keyed in ─────────────────────────────
+
+  const [currency, setCurrency] = useState(home)
+  const [currenciesOpen, setCurrenciesOpen] = useState(false)
+  const [rate, setRate] = useState<Rate | null>(null)
+  const [rateText, setRateText] = useState('')
+  const [rateBusy, setRateBusy] = useState(false)
+  const foreign = currency !== home
+  const rateMicro = foreign ? parseRate(rateText) : null
+
+  // The day's rate is asked for when the currency or the day changes, and the
+  // field is pre-filled — never locked. A broker's rate beats a reference one.
+  useEffect(() => {
+    if (!foreign) {
+      setRate(null)
+      setRateText('')
+      return
+    }
+    let stale = false
+    setRateBusy(true)
+    const base = syncConfig?.kind === 'server' ? syncConfig.baseUrl : DEFAULT_SERVER_URL
+    void fetchRate(currency, home, day, base).then((r) => {
+      if (stale) return
+      setRate(r)
+      setRateText(r ? formatRate(r.rateMicro) : '')
+      setRateBusy(false)
+    })
+    return () => {
+      stale = true
+    }
+  }, [currency, home, day, foreign, syncConfig])
+
+  /** What was keyed, in minor units of `currency`. */
+  const keyedFen = useMemo(
     () => parse(amount.inFrac ? `${amount.int}.${amount.frac}` : amount.int) ?? 0,
     [amount],
   )
+  /** The same in the ledger's currency — the figure every rule below uses. */
+  const amountFen = foreign ? (rateMicro ? convert(keyedFen, rateMicro) : 0) : keyedFen
 
   const categories = useMemo(
     () =>
       [...ledger.categories.values()]
-        .filter((c) => c.kind === 'spend' && !c.archived)
+        .filter((c) => c.kind === kind && !c.archived)
         .sort((a, b) => a.order - b.order),
-    [ledger.categories],
+    [ledger.categories, kind],
   )
 
-  const settings = ledger.settings
+  const income = kind === 'income'
+  /** What is stored: a loss is the same figure below zero. */
+  const sign = income && loss ? -1 : 1
   const coolingFloor = settings.coolingFloorFen
   const perDay = useMemo(() => available(ledger, today, now).perDay, [ledger, today, now])
   const after = perDay - amountFen
 
-  const overFloor = amountFen >= coolingFloor
+  // Income carries no stamp, no cooling and no hold: there is nothing to judge
+  // about money arriving, and nothing to be slowed down about.
+  const overFloor = !income && amountFen >= coolingFloor
   const cooling = overFloor ? coolingDays(amountFen) : 0
   const suspendable = overFloor && (intent === 'want' || intent === 'impulse') && !override
-  const warning = categoryId ? commitWarning(ledger, today, categoryId, amountFen) : null
+  const warning = !income && categoryId ? commitWarning(ledger, today, categoryId, amountFen) : null
   // The hold is required by the amount or by an allowance that is already
   // spent, whichever is true first (SCREENS.md C9b).
-  const needsHold = overFloor || perDay < 0
-  const missing = amountFen === 0 || !categoryId || !intent
+  const needsHold = !income && (overFloor || perDay < 0)
+  const needsRate = foreign && !rateMicro
+  const missing = keyedFen === 0 || needsRate || !categoryId || (!income && !intent)
 
   // ── the amount, keyed one digit at a time ───────────────────────────
 
@@ -98,25 +148,30 @@ export default function Capture({ onClose }: { onClose(): void }) {
 
   const save = useCallback(
     (keep: boolean) => {
-      if (missing || !categoryId || !intent) return
+      if (missing || !categoryId || (!income && !intent)) return
       const entry: Entry = {
         id: newId(),
-        kind: 'spend',
-        amount: amountFen,
-        currency: settings.currency,
+        kind,
+        amount: sign * amountFen,
+        currency: home,
         categoryId,
-        intent,
+        intent: income ? null : intent,
         note: note.trim(),
         merchant: merchant.trim(),
         day,
         createdAt: now,
+        ...(foreign && rateMicro ? { original: { currency, amount: sign * keyedFen, rateMicro } } : {}),
       }
+      if (foreign && rateMicro) rememberRate(currency, home, rateMicro)
       const eventId = commit({ t: 'entry.add', entry })
-      toast(t('capture.saved'), { label: t('ledger.undo'), run: () => undo(eventId) })
       if (!keep) {
+        // The sheet closes and the row prints in the ledger — that is the
+        // receipt. No toast on a plain save (DESIGN.md §6.5).
         onClose()
         return
       }
+      // Staying open, the receipt has to be said, and it can be taken back.
+      toast(t('capture.saved'), { label: t('ledger.undo'), run: () => undo(eventId) })
       // The stamp and the category survive: the next entry is usually the same
       // kind of purchase, and re-choosing them is the tax that ends a streak.
       clearAmount()
@@ -125,10 +180,21 @@ export default function Capture({ onClose }: { onClose(): void }) {
       setOverride(false)
     },
     [
-      missing, categoryId, intent, amountFen, settings.currency, note, merchant, day, now,
-      commit, toast, t, undo, onClose, clearAmount,
+      missing, categoryId, intent, income, kind, amountFen, sign, home, foreign, currency, keyedFen, rateMicro,
+      note, merchant, day, now, commit, toast, t, undo, onClose, clearAmount,
     ],
   )
+
+  // A different kind of entry is a different set of categories and a different
+  // question; what was keyed stays, because the figure is usually right.
+  const switchKind = (next: EntryKind) => {
+    if (next === kind) return
+    setKind(next)
+    setCategoryId(null)
+    setIntent(null)
+    setLoss(false)
+    setOverride(false)
+  }
 
   const suspend = useCallback(() => {
     if (!categoryId || !cooling) return
@@ -219,17 +285,41 @@ export default function Capture({ onClose }: { onClose(): void }) {
   // and then collapsed would look lost.
   const filled = [note.trim(), merchant.trim()].filter(Boolean).join(' · ')
 
-  const hint = amountFen === 0
+  const hint = keyedFen === 0
     ? t('capture.needAmount')
-    : !categoryId
-      ? t('capture.needCategory')
-      : !intent
-        ? t('capture.intentRequired')
-        : ''
+    : needsRate
+      ? t('capture.needRate')
+      : !categoryId
+        ? t('capture.needCategory')
+        : !income && !intent
+          ? t('capture.intentRequired')
+          : ''
+
+  const rateNote = !foreign
+    ? ''
+    : rateBusy
+      ? '…'
+      : !rate
+        ? t('capture.rateUnavailable')
+        : rate.source === 'remembered'
+          ? t('capture.rateRemembered')
+          : t('capture.rateAsOf', { day: rate.asOf.slice(5) })
 
   return (
     <Sheet onClose={onClose} ariaLabel={t('capture.title')}>
       <div className="capture">
+        <div className="capture__kind">
+          <Segmented
+            ariaLabel={t('capture.title')}
+            value={kind}
+            onChange={switchKind}
+            options={[
+              { value: 'spend', label: t('capture.spend') },
+              { value: 'income', label: t('capture.income') },
+            ]}
+          />
+        </div>
+
         <div className="capture__head">
           <button
             type="button"
@@ -317,18 +407,74 @@ export default function Capture({ onClose }: { onClose(): void }) {
         ) : null}
 
         <div
-          className={`capture__amount${amountFen === 0 ? ' capture__amount--empty' : ''}`}
+          className={`capture__amount${keyedFen === 0 ? ' capture__amount--empty' : ''}`}
           role="group"
           aria-label={t('capture.amount')}
         >
-          <Money fen={amountFen} size="screen" currency={settings.currency} />
+          <Money fen={sign * keyedFen} size="screen" currency={currency} />
           <span className="capture__caret" aria-hidden="true" />
+          <button
+            type="button"
+            className="capture__currency t-label"
+            aria-expanded={currenciesOpen}
+            aria-label={`${t('capture.currency')} ${currency}`}
+            onClick={() => setCurrenciesOpen((v) => !v)}
+          >
+            {currency}
+          </button>
         </div>
 
-        <p className="capture__consequence">
-          <span className="t-label">{t('capture.consequence')}</span>
-          <Money fen={after} size="body" tone={after < 0 ? 'over' : undefined} currency={settings.currency} />
-        </p>
+        {currenciesOpen ? (
+          <div className="capture__dates" role="radiogroup" aria-label={t('capture.currency')}>
+            {[home, ...CURRENCIES.filter((c) => c !== home)].map((c) => (
+              <button
+                key={c}
+                type="button"
+                role="radio"
+                aria-checked={currency === c}
+                className="capture__quick t-mono"
+                onClick={() => {
+                  setCurrency(c)
+                  setCurrenciesOpen(false)
+                }}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {foreign ? (
+          <div className="capture__rate">
+            <label className="capture__rate-field">
+              <span className="t-label">{t('capture.rate')}</span>
+              <input
+                className="capture__rate-input t-mono"
+                inputMode="decimal"
+                value={rateText}
+                placeholder={rateBusy ? '…' : '0.0000'}
+                onChange={(e) => setRateText(e.target.value)}
+                aria-describedby="capture-rate-note"
+              />
+            </label>
+            <span className="capture__rate-converted">
+              <span className="t-label">≈</span>
+              <Money fen={sign * amountFen} size="body" currency={home} />
+            </span>
+            <span id="capture-rate-note" className="t-micro capture__rate-note">{rateNote}</span>
+          </div>
+        ) : null}
+
+        {income ? (
+          <p className="capture__consequence">
+            <span className="t-label">{t('capture.incomeNote')}</span>
+          </p>
+        ) : (
+          <p className="capture__consequence">
+            <span className="t-label">{t('capture.consequence')}</span>
+            <Money fen={after} size="body" tone={after < 0 ? 'over' : undefined} currency={home} />
+          </p>
+        )}
 
         <Rule />
 
@@ -349,23 +495,43 @@ export default function Capture({ onClose }: { onClose(): void }) {
 
         <Rule />
 
-        <div className="capture__stamp">
-          <Segmented
-            ariaLabel={t('capture.intent')}
-            value={intent}
-            onChange={(v) => setIntent((prev) => (prev === 'want' && v === 'want' ? 'impulse' : v))}
-            options={[
-              { value: 'need', label: t('capture.intent.need') },
-              { value: 'want', label: t('capture.intent.want') },
-              { value: 'impulse', label: t('capture.intent.impulse') },
-            ]}
-          />
-          {cooling > 0 && intent !== null && intent !== 'need' ? (
-            <p className="t-micro capture__tier">{t('capture.coolingTier', { days: cooling })}</p>
-          ) : null}
-        </div>
+        {income ? (
+          <>
+            <div className="capture__stamp">
+              <Segmented
+                ariaLabel={t('capture.result')}
+                value={loss ? 'loss' : 'gain'}
+                onChange={(v) => setLoss(v === 'loss')}
+                options={[
+                  { value: 'gain', label: t('capture.gain') },
+                  { value: 'loss', label: t('capture.loss') },
+                ]}
+              />
+            </div>
 
-        <Rule />
+            <Rule />
+          </>
+        ) : (
+          <>
+            <div className="capture__stamp">
+              <Segmented
+                ariaLabel={t('capture.intent')}
+                value={intent}
+                onChange={(v) => setIntent((prev) => (prev === 'want' && v === 'want' ? 'impulse' : v))}
+                options={[
+                  { value: 'need', label: t('capture.intent.need') },
+                  { value: 'want', label: t('capture.intent.want') },
+                  { value: 'impulse', label: t('capture.intent.impulse') },
+                ]}
+              />
+              {cooling > 0 && intent !== null && intent !== 'need' ? (
+                <p className="t-micro capture__tier">{t('capture.coolingTier', { days: cooling })}</p>
+              ) : null}
+            </div>
+
+            <Rule />
+          </>
+        )}
 
         <div className="capture__keypad" role="group" aria-label={t('capture.keypad')}>
           {KEYPAD.map((k) =>

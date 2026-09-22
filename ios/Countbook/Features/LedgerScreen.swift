@@ -157,6 +157,18 @@ private func voidLine(_ entry: EffectiveEntry) -> String? {
     return S.t(.ledgerVoided, ["reason": voidance.reason])
 }
 
+/// The receipt: what actually changed hands when that was not in the ledger's
+/// currency. Printed beneath the row like a correction is — a fact about the
+/// figure above, never a second figure to add up.
+@MainActor
+private func originalLine(_ entry: EffectiveEntry) -> String? {
+    guard let original = entry.original else { return nil }
+    return S.t(.ledgerOriginal, [
+        "amount": format(original.amount, currency: original.currency),
+        "rate": formatRate(original.rateMicro),
+    ])
+}
+
 private func intentKey(_ intent: Intent) -> StringKey {
     switch intent {
     case .need: return .captureIntentNeed
@@ -210,6 +222,7 @@ struct LedgerScreen: View {
             }
             .contentColumn()
         }
+        .syncRefresh()
         .background(Ink.paper)
         .scrollDismissesKeyboard(.interactively)
         // The ledger is read once per change here, and never inside a row.
@@ -607,7 +620,8 @@ struct LedgerScreen: View {
         let name = digest.names[entry.categoryId] ?? entry.categoryId
         let payee = entry.note.isEmpty ? entry.merchant : entry.note
         let voided = entry.voidance != nil
-        let lines = correctionLines(entry, digest.corrections[entry.id] ?? [], currency)
+        let receipt = originalLine(entry)
+        let lines = (receipt.map { [$0] } ?? []) + correctionLines(entry, digest.corrections[entry.id] ?? [], currency)
         let reversal = voidLine(entry)
         let shown = voided ? entry.amount : entry.effective
         let time = hhmm(entry.createdAt, calendar)
@@ -620,6 +634,7 @@ struct LedgerScreen: View {
             payee,
             entry.intent.map { S.t(intentKey($0)) } ?? "",
             format(shown, currency: currency),
+            receipt ?? "",
             lines.last ?? "",
             reversal ?? "",
         ].filter { !$0.isEmpty }.joined(separator: " ")
@@ -770,12 +785,18 @@ private struct EntryDetailSheet: View {
     @Environment(Store.self) private var store
 
     @State private var amount: String
+    @State private var rate: String
+    /// An investment result carries a sign; the field holds the magnitude and
+    /// the 盈利 / 亏损 switch holds the sign, because a keypad has no minus.
+    @State private var loss: Bool
+    @State private var correctLoss: Bool
     @State private var note: String
     @State private var day: Day
     @State private var intent: Intent?
     @State private var categoryId: String
 
     @State private var correctTo: String
+    @State private var correctRate: String
     @State private var reason = ""
     @State private var voiding = false
     @State private var voidReason = ""
@@ -797,17 +818,62 @@ private struct EntryDetailSheet: View {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .current
         stamped = "\(entry.day) \(hhmm(entry.createdAt, calendar))"
-        _amount = State(initialValue: decimalString(entry.amount))
+        // A receipt in another currency is edited as that receipt: the figure
+        // the person actually paid, and the rate. The ledger's own figure is
+        // derived, shown, and never typed over — it is a conversion, not a fact.
+        let receipt = entry.original
+        _amount = State(initialValue: decimalString(abs(receipt?.amount ?? entry.amount)))
+        _rate = State(initialValue: receipt.map { formatRate($0.rateMicro) } ?? "")
+        _loss = State(initialValue: entry.kind == .income && entry.amount < 0)
+        _correctLoss = State(initialValue: entry.kind == .income && entry.effective < 0)
         _note = State(initialValue: entry.note)
         _day = State(initialValue: entry.day)
         _intent = State(initialValue: entry.intent)
         _categoryId = State(initialValue: entry.categoryId)
-        _correctTo = State(initialValue: decimalString(entry.effective))
+        _correctTo = State(initialValue: decimalString(abs(receipt?.amount ?? entry.effective)))
+        _correctRate = State(initialValue: receipt.map { formatRate($0.rateMicro) } ?? "")
     }
 
     private var currency: String { entry.currency }
-    private var parsedAmount: Fen? { parse(amount) }
-    private var parsedCorrection: Fen? { parse(correctTo) }
+    private var receipt: ForeignAmount? { entry.original }
+    private var investment: Bool { entry.kind == .income }
+    private var sign: Fen { investment && loss ? -1 : 1 }
+    private var correctSign: Fen { investment && correctLoss ? -1 : 1 }
+    private var keyedCurrency: String { receipt?.currency ?? currency }
+    /// What was typed, in minor units of the currency it was typed in.
+    private var keyed: Fen? { parse(amount) }
+    private var keyedCorrection: Fen? { parse(correctTo) }
+    private var parsedRate: Int? { receipt == nil ? nil : parseRate(rate) }
+    private var parsedCorrectRate: Int? { receipt == nil ? nil : parseRate(correctRate) }
+    /// The same in the ledger's currency — what is stored as `amount`.
+    private var parsedAmount: Fen? {
+        guard receipt != nil else { return keyed }
+        guard let keyed, let parsedRate else { return nil }
+        return convert(keyed, rateMicro: parsedRate)
+    }
+    private var parsedCorrection: Fen? {
+        guard receipt != nil else { return keyedCorrection }
+        guard let keyedCorrection, let parsedCorrectRate else { return nil }
+        return convert(keyedCorrection, rateMicro: parsedCorrectRate)
+    }
+    private var newReceipt: ForeignAmount? {
+        guard let receipt, let keyed, let parsedRate else { return nil }
+        return ForeignAmount(currency: receipt.currency, amount: sign * keyed, rateMicro: parsedRate)
+    }
+    private var correctedReceipt: ForeignAmount? {
+        guard let receipt, let keyedCorrection, let parsedCorrectRate else { return nil }
+        return ForeignAmount(currency: receipt.currency, amount: correctSign * keyedCorrection, rateMicro: parsedCorrectRate)
+    }
+    private var resultSwitch: some View {
+        SegmentedStamp(
+            options: [
+                .init(value: false, label: S.t(.captureGain)),
+                .init(value: true, label: S.t(.captureLoss)),
+            ],
+            selection: sealed ? correctLoss : loss,
+            accessibilityLabel: S.t(.captureResult)
+        ) { if sealed { correctLoss = $0 } else { loss = $0 } }
+    }
     /// A typed date is only a date once it round-trips: `2026-02-31` is not one.
     private var parsedDay: Day? { toDay(fromDay(day)) == day ? day : nil }
     private var dayIntoSealed: Bool {
@@ -846,12 +912,26 @@ private struct EntryDetailSheet: View {
 
     private var figure: some View {
         VStack(alignment: .leading, spacing: Space.s2) {
-            MoneyView(
-                fen: sealed ? entry.effective : (parsedAmount ?? entry.amount),
-                size: .screen,
-                currency: currency
-            )
-            .frame(maxWidth: .infinity, alignment: .trailing)
+            if let receipt {
+                MoneyView(
+                    fen: sealed ? receipt.amount : sign * (keyed ?? abs(receipt.amount)),
+                    size: .screen,
+                    currency: receipt.currency
+                )
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                Text(S.t(.entryInHome, [
+                    "amount": format(sealed ? entry.effective : sign * (parsedAmount ?? abs(entry.amount)), currency: currency),
+                ]))
+                .textStyle(.mono)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            } else {
+                MoneyView(
+                    fen: sealed ? entry.effective : sign * (parsedAmount ?? abs(entry.amount)),
+                    size: .screen,
+                    currency: currency
+                )
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
 
             Text(entry.note.isEmpty ? categoryName : "\(categoryName) · \(entry.note)")
                 .textStyle(.body, ink: Ink.ink700)
@@ -871,10 +951,19 @@ private struct EntryDetailSheet: View {
 
     private var editForm: some View {
         VStack(alignment: .leading, spacing: Space.s4) {
+            if investment { resultSwitch }
             LabelledField(
-                label: S.t(.entryAmountLabel), text: $amount,
+                label: receipt == nil ? S.t(.entryAmountLabel) : "\(S.t(.entryAmountLabel)) · \(keyedCurrency)",
+                text: $amount,
                 mono: true, keyboard: .decimalPad
             )
+            if receipt != nil {
+                LabelledField(
+                    label: S.t(.entryRate), text: $rate,
+                    mono: true, keyboard: .decimalPad,
+                    suffix: parsedAmount.map { format(sign * $0, currency: currency) }
+                )
+            }
 
             VStack(alignment: .leading, spacing: Space.s2) {
                 Text(S.t(.captureCategory)).textStyle(.label)
@@ -924,11 +1013,12 @@ private struct EntryDetailSheet: View {
         store.commit(.entryPatch(
             target: entry.id,
             patch: EntryPatch(
-                amount: parsedAmount,
+                amount: sign * parsedAmount,
                 categoryId: categoryId,
                 intent: intent,
                 note: note,
-                day: parsedDay
+                day: parsedDay,
+                original: newReceipt
             )
         ))
         onClose()
@@ -948,10 +1038,19 @@ private struct EntryDetailSheet: View {
 
     private var correctionForm: some View {
         VStack(alignment: .leading, spacing: Space.s4) {
+            if investment { resultSwitch }
             LabelledField(
-                label: S.t(.entryCorrectAmount), text: $correctTo,
+                label: receipt == nil ? S.t(.entryCorrectAmount) : "\(S.t(.entryCorrectAmount)) · \(keyedCurrency)",
+                text: $correctTo,
                 mono: true, keyboard: .decimalPad
             )
+            if receipt != nil {
+                LabelledField(
+                    label: S.t(.entryRate), text: $correctRate,
+                    mono: true, keyboard: .decimalPad,
+                    suffix: parsedCorrection.map { format(correctSign * $0, currency: currency) }
+                )
+            }
             LabelledField(
                 label: S.t(.entryReasonLabel), text: $reason,
                 placeholder: S.t(.ledgerReasonRequired),
@@ -984,8 +1083,9 @@ private struct EntryDetailSheet: View {
         guard let parsedCorrection, reasonReady else { return }
         store.commit(.entryCorrect(
             target: entry.id,
-            amount: parsedCorrection,
-            reason: reason.trimmingCharacters(in: .whitespacesAndNewlines)
+            amount: correctSign * parsedCorrection,
+            reason: reason.trimmingCharacters(in: .whitespacesAndNewlines),
+            original: correctedReceipt
         ))
         onClose()
     }
@@ -1042,7 +1142,9 @@ private struct EntryDetailSheet: View {
     /// the reason the ledger is worth anything.
     @ViewBuilder
     private var history: some View {
-        let lines = correctionLines(entry, corrections, currency) + (voidLine(entry).map { [$0] } ?? [])
+        let lines = (originalLine(entry).map { [$0] } ?? [])
+            + correctionLines(entry, corrections, currency)
+            + (voidLine(entry).map { [$0] } ?? [])
         if !lines.isEmpty {
             VStack(alignment: .leading, spacing: Space.s2) {
                 RuleView()

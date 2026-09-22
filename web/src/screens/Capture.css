@@ -142,6 +142,69 @@
   gap: var(--s-2);
 }
 
+/* ── 支出 / 收入 ───────────────────────────────────────────────────────── */
+
+/* The one switch above everything else: it changes which categories are
+   offered and whether a stamp is asked for, so it is asked first. */
+.capture__kind {
+  display: block;
+  padding-bottom: var(--s-2);
+}
+
+/* ── currency and rate ──────────────────────────────────────────────── */
+
+/* The code sits after the figure at label size: a fact about the figure, not
+   part of it. Selection is the same underline the quick days use. */
+.capture__currency {
+  align-self: center;
+  min-height: var(--l-hit-target);
+  padding-inline: var(--s-2);
+  margin-inline-end: calc(var(--s-2) * -1);
+  color: var(--c-ink500);
+}
+.capture__currency[aria-expanded='true'] { color: var(--c-ink900); }
+.capture__quick[aria-checked='true'] {
+  color: var(--c-ink900);
+  box-shadow: inset 0 calc(var(--l-hairline) * -1) 0 0 var(--c-ink900);
+}
+
+.capture__rate {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: var(--s-4);
+  row-gap: var(--s-1);
+}
+.capture__rate-field {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+/* A well in the row's own size: the rate is typed, and typed figures wear
+   the well everywhere else in the app. */
+.capture__rate-input {
+  width: 9ch;
+  min-height: var(--s-7);
+  padding-inline: var(--s-2);
+  border: 0;
+  border-radius: var(--r-field);
+  background: var(--c-surface-sunken);
+  color: var(--c-ink900);
+  text-align: right;
+}
+.capture__rate-input:focus-visible { outline: 1px solid var(--c-rule-strong); }
+.capture__rate-converted {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: var(--s-2);
+}
+.capture__rate-note {
+  grid-column: 1 / -1;
+  text-align: right;
+  color: var(--c-ink500);
+}
+
 /* ── categories: words, no icons, no colour (§2.1 R6) ────────────────── */
 
 .capture__grid {

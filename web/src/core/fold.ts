@@ -50,7 +50,10 @@ export function fold(events: readonly Event[]): Ledger {
         break
 
       case 'entry.correct':
-        L.corrections.push({ id: e.id, targetId: e.target, amount: e.amount, reason: e.reason, at: decode(e.hlc).wall })
+        L.corrections.push({
+          id: e.id, targetId: e.target, amount: e.amount, reason: e.reason, at: decode(e.hlc).wall,
+          ...(e.original ? { original: e.original } : {}),
+        })
         break
 
       case 'entry.void':
@@ -175,6 +178,9 @@ export function effective(L: Ledger): Map<string, EffectiveEntry> {
     out.set(id, {
       ...e,
       effective: v ? 0 : (c?.amount ?? e.amount),
+      // The receipt follows the correction: what was actually paid is a fact
+      // about the corrected figure, not the original one.
+      ...(c?.original ? { original: c.original } : {}),
       ...(c ? { correction: c } : {}),
       ...(v ? { voidance: v } : {}),
     })

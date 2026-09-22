@@ -256,3 +256,11 @@
   .settings__revision,
   .settings__device { border-bottom-width: 0.5px; }
 }
+
+/* A section's mark sits before its title, in the title's own grey. */
+.settings__title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.settings__glyph { color: var(--c-ink500); display: inline-flex; }

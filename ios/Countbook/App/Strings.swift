@@ -43,6 +43,9 @@ enum StringKey: String, CaseIterable, Sendable {
     case captureTitle = "capture.title"
     case captureSpend = "capture.spend"
     case captureIncome = "capture.income"
+    case captureGain = "capture.gain"
+    case captureLoss = "capture.loss"
+    case captureResult = "capture.result"
     case captureSave = "capture.save"
     case captureSaveWarned = "capture.saveWarned"
     case captureHold = "capture.hold"
@@ -78,6 +81,13 @@ enum StringKey: String, CaseIterable, Sendable {
     case captureOverrideWarned = "capture.overrideWarned"
     case captureSuspended = "capture.suspended"
     case captureOptional = "capture.optional"
+    case captureCurrency = "capture.currency"
+    case captureRate = "capture.rate"
+    case captureRateAsOf = "capture.rateAsOf"
+    case captureRateRemembered = "capture.rateRemembered"
+    case captureRateUnavailable = "capture.rateUnavailable"
+    case captureNeedRate = "capture.needRate"
+    case captureIncomeNote = "capture.incomeNote"
     case ledgerTitle = "ledger.title"
     case ledgerMonth = "ledger.month"
     case ledgerSealed = "ledger.sealed"
@@ -88,6 +98,9 @@ enum StringKey: String, CaseIterable, Sendable {
     case ledgerEmptyHint = "ledger.emptyHint"
     case ledgerCorrection = "ledger.correction"
     case ledgerVoided = "ledger.voided"
+    case ledgerOriginal = "ledger.original"
+    case entryRate = "entry.rate"
+    case entryInHome = "entry.inHome"
     case ledgerCorrect = "ledger.correct"
     case ledgerVoid = "ledger.void"
     case ledgerDelete = "ledger.delete"
@@ -146,6 +159,13 @@ enum StringKey: String, CaseIterable, Sendable {
     case reportHours = "report.hours"
     case reportHoursNote = "report.hoursNote"
     case reportYear = "report.year"
+    case reportCashflow = "report.cashflow"
+    case reportRegretTitle = "report.regretTitle"
+    case reportIncome = "report.income"
+    case reportSpend = "report.spend"
+    case reportNet = "report.net"
+    case reportIncomeBy = "report.incomeBy"
+    case reportThisYear = "report.thisYear"
     case reportNeedMoreData = "report.needMoreData"
     case reportMonthTitle = "report.monthTitle"
     case reportPrevMonth = "report.prevMonth"
@@ -292,11 +312,9 @@ enum StringKey: String, CaseIterable, Sendable {
     case syncError = "sync.error"
     case syncRetry = "sync.retry"
     case syncNow = "sync.now"
-    case syncChoose = "sync.choose"
     case syncGithub = "sync.github"
     case syncGithubHint = "sync.githubHint"
     case syncServer = "sync.server"
-    case syncServerHint = "sync.serverHint"
     case syncRepo = "sync.repo"
     case syncToken = "sync.token"
     case syncTokenHelp = "sync.tokenHelp"
@@ -320,7 +338,24 @@ enum StringKey: String, CaseIterable, Sendable {
     case syncLogin = "sync.login"
     case syncSignup = "sync.signup"
     case syncServerUrl = "sync.serverUrl"
-    case syncServerKeyHint = "sync.serverKeyHint"
+    case syncPasswordHint = "sync.passwordHint"
+    case syncPasswordAgain = "sync.passwordAgain"
+    case syncPasswordShort = "sync.passwordShort"
+    case syncPasswordMismatch = "sync.passwordMismatch"
+    case syncNoAccount = "sync.noAccount"
+    case syncHaveAccount = "sync.haveAccount"
+    case syncAdvanced = "sync.advanced"
+    case syncUseGithub = "sync.useGithub"
+    case syncUseServer = "sync.useServer"
+    case syncAccount = "sync.account"
+    case syncLogout = "sync.logout"
+    case syncRelogin = "sync.relogin"
+    case syncWrongPassword = "sync.wrongPassword"
+    case syncMarkPending = "sync.mark.pending"
+    case syncMarkOffline = "sync.mark.offline"
+    case syncMarkError = "sync.mark.error"
+    case syncMarkRelogin = "sync.mark.relogin"
+    case syncMarkOpen = "sync.mark.open"
     case standardPerMonth = "standard.perMonth"
     case standardPerEntry = "standard.perEntry"
     case standardUnset = "standard.unset"
@@ -350,7 +385,6 @@ enum StringKey: String, CaseIterable, Sendable {
     case syncOwner = "sync.owner"
     case syncBranch = "sync.branch"
     case syncConnecting = "sync.connecting"
-    case syncLocked = "sync.locked"
     case syncUnlock = "sync.unlock"
     case syncOffNote = "sync.offNote"
     case syncPassphraseShort = "sync.passphraseShort"
@@ -450,7 +484,10 @@ enum S {
         case .todayStampImpulse: return ("冲", "I")
         case .captureTitle: return ("记一笔", "New entry")
         case .captureSpend: return ("支出", "Spend")
-        case .captureIncome: return ("收入", "Income")
+        case .captureIncome: return ("投资", "Investment")
+        case .captureGain: return ("盈利", "Gain")
+        case .captureLoss: return ("亏损", "Loss")
+        case .captureResult: return ("结果", "Outcome")
         case .captureSave: return ("存入账页", "Enter")
         case .captureSaveWarned: return ("存入账页 · {warning}", "Enter · {warning}")
         case .captureHold: return ("按住存入", "Hold to enter")
@@ -486,6 +523,13 @@ enum S {
         case .captureOverrideWarned: return ("仍要立即记入 · {warning}", "Enter it now anyway · {warning}")
         case .captureSuspended: return ("已挂起", "Held")
         case .captureOptional: return ("备注 · 商家", "Note · Payee")
+        case .captureCurrency: return ("币种", "Currency")
+        case .captureRate: return ("汇率", "Rate")
+        case .captureRateAsOf: return ("{day} 参考汇率", "Reference rate of {day}")
+        case .captureRateRemembered: return ("上次用的汇率，可改", "Last rate used; editable")
+        case .captureRateUnavailable: return ("取不到汇率，请手动填", "No rate available; enter one")
+        case .captureNeedRate: return ("先填汇率", "Enter a rate first")
+        case .captureIncomeNote: return ("投资不计入今日可用", "Investments do not change what is available today")
         case .ledgerTitle: return ("账页", "Ledger")
         case .ledgerMonth: return ("{month}", "{month}")
         case .ledgerSealed: return ("结", "Closed")
@@ -496,6 +540,9 @@ enum S {
         case .ledgerEmptyHint: return ("右下角开始第一笔", "Start with the button below")
         case .ledgerCorrection: return ("更正 · 原 {from} → {to} · 事由：{reason}", "Correction · was {from} → {to} · {reason}")
         case .ledgerVoided: return ("冲销 · 事由：{reason}", "Reversed · {reason}")
+        case .ledgerOriginal: return ("原币 {amount} · 汇率 {rate}", "Paid {amount} · rate {rate}")
+        case .entryRate: return ("汇率", "Rate")
+        case .entryInHome: return ("≈ {amount}", "≈ {amount}")
         case .ledgerCorrect: return ("更正", "Correct")
         case .ledgerVoid: return ("冲销", "Reverse")
         case .ledgerDelete: return ("删除", "Delete")
@@ -554,6 +601,13 @@ enum S {
         case .reportHours: return ("记账时刻", "When you log")
         case .reportHoursNote: return ("深夜下单会在这里显形", "Late-night ordering shows up here")
         case .reportYear: return ("年账页", "Year")
+        case .reportCashflow: return ("收支", "Cash flow")
+        case .reportRegretTitle: return ("后悔账", "Regret")
+        case .reportIncome: return ("投资", "Investment")
+        case .reportSpend: return ("支出", "Spending")
+        case .reportNet: return ("结余", "Net")
+        case .reportIncomeBy: return ("投资构成", "Investment by category")
+        case .reportThisYear: return ("本年", "This year")
         case .reportNeedMoreData: return ("数据还不够 · 还差 {n} 笔", "Not enough data yet · {n} to go")
         case .reportMonthTitle: return ("{year} 年 {month} 月", "{year}-{month}")
         case .reportPrevMonth: return ("上一月", "Previous month")
@@ -700,11 +754,9 @@ enum S {
         case .syncError: return ("同步失败 · {message}", "Sync failed · {message}")
         case .syncRetry: return ("重试", "Retry")
         case .syncNow: return ("立即同步", "Sync now")
-        case .syncChoose: return ("选择同步方式", "How to sync")
         case .syncGithub: return ("GitHub 私有仓库", "Private GitHub repo")
         case .syncGithubHint: return ("不需要服务器，用一个私有仓库存加密数据", "No server needed — an encrypted blob in a private repo")
         case .syncServer: return ("自建服务器", "Your own server")
-        case .syncServerHint: return ("自己部署的同步服务", "A sync service you deployed")
         case .syncRepo: return ("仓库", "Repository")
         case .syncToken: return ("访问令牌", "Access token")
         case .syncTokenHelp: return ("去 GitHub 生成一个", "Generate one on GitHub")
@@ -728,7 +780,24 @@ enum S {
         case .syncLogin: return ("登录", "Log in")
         case .syncSignup: return ("注册", "Sign up")
         case .syncServerUrl: return ("服务器地址", "Server address")
-        case .syncServerKeyHint: return ("同一个密码用来登录，也用来给数据加密。密码不会被保存，只在这台设备上派生出密钥。", "The one password both logs you in and encrypts your data. It is never stored; the key is derived on this device.")
+        case .syncPasswordHint: return ("密码同时是加密密钥，忘了无法找回。", "The password is also the encryption key. It cannot be recovered.")
+        case .syncPasswordAgain: return ("再输一次", "Once more")
+        case .syncPasswordShort: return ("密码至少 8 个字符", "At least 8 characters")
+        case .syncPasswordMismatch: return ("两次输入不一样", "Those do not match")
+        case .syncNoAccount: return ("没有账号？注册", "No account? Sign up")
+        case .syncHaveAccount: return ("已有账号？登录", "Have an account? Log in")
+        case .syncAdvanced: return ("高级", "Advanced")
+        case .syncUseGithub: return ("改用 GitHub 私有仓库", "Use a private GitHub repo instead")
+        case .syncUseServer: return ("改用账号登录", "Log in with an account instead")
+        case .syncAccount: return ("账号", "Account")
+        case .syncLogout: return ("退出登录", "Log out")
+        case .syncRelogin: return ("登录已失效，请重新输入密码。", "Signed out. Enter your password to continue.")
+        case .syncWrongPassword: return ("这个密码打不开已有的数据", "This password does not open the existing data")
+        case .syncMarkPending: return ("待同步", "Waiting to sync")
+        case .syncMarkOffline: return ("离线 · 未同步", "Offline · not synced")
+        case .syncMarkError: return ("同步失败", "Sync failed")
+        case .syncMarkRelogin: return ("请重新登录", "Log in again")
+        case .syncMarkOpen: return ("同步状态，打开设置", "Sync status, opens Settings")
         case .standardPerMonth: return ("每月", "a month")
         case .standardPerEntry: return ("每月", "a month")
         case .standardUnset: return ("未设", "Not set")
@@ -758,7 +827,6 @@ enum S {
         case .syncOwner: return ("账号", "Owner")
         case .syncBranch: return ("分支", "Branch")
         case .syncConnecting: return ("连接中…", "Connecting…")
-        case .syncLocked: return ("已连接，但还没解锁。输入口令继续。", "Connected but locked. Enter the passphrase to continue.")
         case .syncUnlock: return ("解锁", "Unlock")
         case .syncOffNote: return ("数据只在这台设备上。开启同步后，其他设备可以看到同一本账。", "Everything is on this device. Turn on sync and your other devices see the same ledger.")
         case .syncPassphraseShort: return ("口令至少 8 个字符", "At least 8 characters")

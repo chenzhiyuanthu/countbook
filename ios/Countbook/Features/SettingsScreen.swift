@@ -19,11 +19,6 @@ private let minPassphrase = 8
 private let proposalDays = 30
 private let defaultBranch = "main"
 
-/// The sync server this build points at by default, so signing in is just an
-/// email and a password. sslip.io resolves the dotted-IP name to the box, so a
-/// real certificate is issued with no DNS record to create. Mirrors
-/// web/src/sync/config.ts.
-private let defaultServerURL = "https://countbook.chenzhiyuanthu.com"
 /// SCREENS.md B8: the save receipt is a line that stands for three seconds.
 private let savedNote = Duration.seconds(3)
 
@@ -108,22 +103,25 @@ struct SettingsScreen: View {
 /// section's rows. Parts are separated by air rather than by nested cards (§5.2).
 private struct SettingsSection<Trailing: View, Content: View>: View {
     let title: String
+    var glyph: GlyphName?
     var trailing: Trailing
     var content: Content
 
     init(
         title: String,
+        glyph: GlyphName? = nil,
         @ViewBuilder trailing: () -> Trailing,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
+        self.glyph = glyph
         self.trailing = trailing()
         self.content = content()
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s4) {
-            SectionHeader(title) { trailing }
+            SectionHeader(title, glyph: glyph) { trailing }
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -131,8 +129,8 @@ private struct SettingsSection<Trailing: View, Content: View>: View {
 }
 
 extension SettingsSection where Trailing == EmptyView {
-    init(title: String, @ViewBuilder content: () -> Content) {
-        self.init(title: title, trailing: { EmptyView() }, content: content)
+    init(title: String, glyph: GlyphName? = nil, @ViewBuilder content: () -> Content) {
+        self.init(title: title, glyph: glyph, trailing: { EmptyView() }, content: content)
     }
 }
 
@@ -313,7 +311,7 @@ private struct StandardSection: View {
     @State private var logged = false
 
     var body: some View {
-        SettingsSection(title: S.t(.standardTitle)) {
+        SettingsSection(title: S.t(.standardTitle), glyph: .standard) {
             if derived.monthlyFen == 0 {
                 Text(S.t(.standardEmpty))
                     .textStyle(.body, ink: Ink.ink700)
@@ -635,7 +633,7 @@ private struct WishSection: View {
     @State private var seeded = false
 
     var body: some View {
-        SettingsSection(title: S.t(.settingsWishObject)) {
+        SettingsSection(title: S.t(.settingsWishObject), glyph: .wish) {
             Text(S.t(.settingsWishObjectHint))
                 .textStyle(.body, ink: Ink.ink500)
                 .fixedSize(horizontal: false, vertical: true)
@@ -699,26 +697,36 @@ private struct WishSection: View {
 private struct SyncSection: View {
     @Environment(Store.self) private var store
     @Environment(SyncEngine.self) private var sync
+    @State private var advanced = false
 
     var body: some View {
         if sync.phase == .off || sync.config == nil {
-            SettingsSection(title: S.t(.syncTitle)) {
+            SettingsSection(title: S.t(.syncTitle), glyph: .sync) {
                 Text(S.t(.syncOffNote))
                     .textStyle(.body, ink: Ink.ink700)
                     .fixedSize(horizontal: false, vertical: true)
                 ConnectForms()
             }
-        } else if sync.phase == .locked {
-            SettingsSection(title: S.t(.syncTitle)) {
-                Text(S.t(.syncLocked))
+        } else if sync.phase == .locked || sync.authExpired {
+            // A lost key and an expired session are the same ask — the password —
+            // and are asked for in the same words as the first time, not as an
+            // "unlock".
+            SettingsSection(title: S.t(.syncTitle), glyph: .sync) {
+                Text(S.t(.syncRelogin))
                     .textStyle(.body, ink: Ink.ink700)
                     .fixedSize(horizontal: false, vertical: true)
-                UnlockForm()
-                DangerButton(S.t(.syncDisconnect)) { sync.disconnect() }
+                ReloginForm()
+                DangerButton(leave) { sync.disconnect() }
             }
         } else {
             connected
         }
+    }
+
+    /// An account is left by logging out; a repository is merely disconnected.
+    private var leave: String {
+        if case .server? = sync.config { return S.t(.syncLogout) }
+        return S.t(.syncDisconnect)
     }
 
     /// Always one word and never a spinner (SCREENS.md Y8): the timestamp is its
@@ -748,11 +756,12 @@ private struct SyncSection: View {
     private var connected: some View {
         SettingsSection(
             title: S.t(.syncTitle),
+            glyph: .sync,
             trailing: { Text(stateWord).textStyle(.mono, mono: true, ink: stateInk) }
         ) {
             if let config = sync.config {
                 HStack(alignment: .firstTextBaseline, spacing: Space.s3) {
-                    Text(config.kind == .github ? S.t(.syncGithub) : S.t(.syncServer))
+                    Text(config.kind == .github ? S.t(.syncGithub) : S.t(.syncAccount))
                         .textStyle(.body)
                     Spacer(minLength: Space.s3)
                     Text(config.describe)
@@ -773,18 +782,26 @@ private struct SyncSection: View {
                 Task { await sync.syncNow() }
             }
 
-            if let fingerprint = sync.fingerprint {
-                SettingsBlock { FingerprintBlock(value: fingerprint) }
-            }
             if case .server(let config, _)? = sync.config {
                 SettingsBlock { DeviceList(config: config) }
+            }
+
+            // The fingerprint is a diagnostic, not a step: it stays behind a fold.
+            SettingsBlock {
+                HStack(spacing: Space.s3) {
+                    TextLink(S.t(.syncAdvanced)) { advanced.toggle() }
+                    Spacer(minLength: 0)
+                }
+                if advanced, let fingerprint = sync.fingerprint {
+                    FingerprintBlock(value: fingerprint)
+                }
             }
 
             SettingsBlock {
                 Text(S.t(.syncDisconnectHint))
                     .textStyle(.body, ink: Ink.ink500)
                     .fixedSize(horizontal: false, vertical: true)
-                DangerButton(S.t(.syncDisconnect)) { sync.disconnect() }
+                DangerButton(leave) { sync.disconnect() }
             }
         }
     }
@@ -902,34 +919,57 @@ private struct DeviceList: View {
     }
 }
 
-/// The locked phase: the vault is configured, the key is not on this device.
+/// The password once more. For the server this is a real login — a fresh token
+/// and the key re-derived in one press — so an expired session and a lost key
+/// are cured by the same form. The GitHub vault has no session; only the key.
 @MainActor
-private struct UnlockForm: View {
+private struct ReloginForm: View {
     @Environment(SyncEngine.self) private var sync
 
-    @State private var passphrase = ""
+    @State private var password = ""
     @State private var busy = false
     @State private var error = ""
 
+    private var server: Bool {
+        if case .server? = sync.config { return true }
+        return false
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s4) {
-            LabelledField(label: S.t(.syncPassphrase), text: $passphrase, secure: true)
+            LabelledField(
+                label: server ? S.t(.syncPassword) : S.t(.syncPassphrase),
+                text: $password,
+                secure: true
+            )
             if !error.isEmpty { ErrorNote(message: error) }
             PrimaryButton(
-                busy ? S.t(.syncConnecting) : S.t(.syncUnlock),
-                disabled: busy || passphrase.count < minPassphrase
+                busy ? S.t(.syncConnecting) : (server ? S.t(.syncLogin) : S.t(.syncUnlock)),
+                disabled: busy || password.isEmpty
             ) {
-                unlock()
+                submit()
             }
         }
     }
 
-    private func unlock() {
+    private func submit() {
         busy = true
         error = ""
+        let password = password
         Task {
             do {
-                try await sync.unlock(passphrase: passphrase)
+                if case .server(let cfg, let email)? = sync.config {
+                    let session = try await ServerStore.login(
+                        baseUrl: cfg.baseUrl, email: email, password: password,
+                        device: thisDeviceID(), label: SyncEngine.deviceLabel
+                    )
+                    try await sync.connectServer(
+                        ServerConfig(baseUrl: cfg.baseUrl, token: session.token),
+                        email: email, passphrase: password, remember: true
+                    )
+                } else {
+                    try await sync.unlock(passphrase: password)
+                }
             } catch {
                 self.error = error.localizedDescription
             }
@@ -967,26 +1007,16 @@ private struct PassphrasePair: View {
     }
 }
 
+/// An account is the door; the GitHub vault is a side entrance reached by a
+/// link, not a choice presented up front. Most people should never see it.
 private struct ConnectForms: View {
     @State private var kind = VaultStoreKind.server
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Space.s4) {
-            Text(S.t(.syncChoose)).textStyle(.label)
-            SegmentedStamp(
-                options: [
-                    .init(value: VaultStoreKind.server, label: S.t(.syncServer)),
-                    .init(value: VaultStoreKind.github, label: S.t(.syncGithub)),
-                ],
-                selection: kind,
-                accessibilityLabel: S.t(.syncChoose)
-            ) { kind = $0 }
-
-            if kind == .github {
-                GitHubForm()
-            } else {
-                ServerForm()
-            }
+        if kind == .github {
+            GitHubForm { kind = .server }
+        } else {
+            ServerForm { kind = .github }
         }
     }
 }
@@ -994,6 +1024,7 @@ private struct ConnectForms: View {
 @MainActor
 private struct GitHubForm: View {
     @Environment(SyncEngine.self) private var sync
+    let onServer: () -> Void
 
     @State private var owner = ""
     @State private var repo = ""
@@ -1029,6 +1060,10 @@ private struct GitHubForm: View {
             ) {
                 connect()
             }
+            HStack(spacing: Space.s3) {
+                TextLink(S.t(.syncUseServer), action: onServer)
+                Spacer(minLength: 0)
+            }
         }
     }
 
@@ -1063,65 +1098,91 @@ private struct GitHubForm: View {
 }
 
 @MainActor
+/// Email, password, one button — the shape of every login form, which is the
+/// point. Signup is a link beneath it; the server address and the GitHub
+/// alternative are behind 高级, because the address is already right.
 private struct ServerForm: View {
     private enum Mode: String, Hashable { case login, signup }
 
     @Environment(SyncEngine.self) private var sync
+    let onGitHub: () -> Void
 
     @State private var mode = Mode.login
     @State private var url = defaultServerURL
     @State private var email = ""
     @State private var password = ""
+    @State private var again = ""
     @State private var code = ""
+    @State private var advanced = false
     @State private var busy = false
     @State private var error = ""
 
+    private var signingUp: Bool { mode == .signup }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s4) {
-            Text(S.t(.syncServerHint))
-                .textStyle(.body, ink: Ink.ink500)
-                .fixedSize(horizontal: false, vertical: true)
-            SegmentedStamp(
-                options: [
-                    .init(value: Mode.login, label: S.t(.syncLogin)),
-                    .init(value: Mode.signup, label: S.t(.syncSignup)),
-                ],
-                selection: mode,
-                accessibilityLabel: S.t(.syncServer)
-            ) { mode = $0 }
-
-            LabelledField(
-                label: S.t(.syncServerUrl),
-                text: $url,
-                placeholder: "https://",
-                mono: true,
-                keyboard: .URL
-            )
             LabelledField(label: S.t(.syncEmail), text: $email, mono: true, keyboard: .emailAddress)
             LabelledField(label: S.t(.syncPassword), text: $password, secure: true)
-            if mode == .signup {
+            if signingUp {
+                LabelledField(label: S.t(.syncPasswordAgain), text: $again, secure: true)
                 LabelledField(label: S.t(.syncCode), text: $code, mono: true)
             }
-            Text(S.t(.syncServerKeyHint))
+            // Stated plainly and without colour: a fact about how the vault
+            // works, not a warning (SCREENS.md Y6).
+            Text(S.t(.syncPasswordHint))
                 .textStyle(.body, ink: Ink.ink500)
                 .fixedSize(horizontal: false, vertical: true)
+            if !problem.isEmpty {
+                Text(problem)
+                    .textStyle(.body, ink: Ink.ink700)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if !error.isEmpty { ErrorNote(message: error) }
             PrimaryButton(
-                busy ? S.t(.syncConnecting) : (mode == .signup ? S.t(.syncSignup) : S.t(.syncLogin)),
+                busy ? S.t(.syncConnecting) : (signingUp ? S.t(.syncSignup) : S.t(.syncLogin)),
                 disabled: busy || !ready
             ) {
                 submit()
+            }
+            HStack(spacing: Space.s5) {
+                TextLink(signingUp ? S.t(.syncHaveAccount) : S.t(.syncNoAccount)) {
+                    mode = signingUp ? .login : .signup
+                    error = ""
+                }
+                TextLink(S.t(.syncAdvanced)) { advanced.toggle() }
+                Spacer(minLength: 0)
+            }
+            if advanced {
+                LabelledField(
+                    label: S.t(.syncServerUrl),
+                    text: $url,
+                    placeholder: "https://",
+                    mono: true,
+                    keyboard: .URL
+                )
+                HStack(spacing: Space.s3) {
+                    TextLink(S.t(.syncUseGithub), action: onGitHub)
+                    Spacer(minLength: 0)
+                }
             }
         }
     }
 
     // One secret: the account password authenticates and also derives the vault
     // key. See the note in the web ServerForm — a stolen database is ciphertext
-    // plus a scrypt hash, and on a personal server the operator is you.
+    // plus a scrypt hash, and on a personal server the operator is you. Signup
+    // needs 8+ and a second typing for that reason — there is no reset for a
+    // key; login trusts whatever the account already has.
+    private var problem: String {
+        if signingUp, !password.isEmpty, password.count < minPassphrase { return S.t(.syncPasswordShort) }
+        if signingUp, !again.isEmpty, password != again { return S.t(.syncPasswordMismatch) }
+        return ""
+    }
+
     private var ready: Bool {
         !url.trimmingCharacters(in: .whitespaces).isEmpty
             && !email.trimmingCharacters(in: .whitespaces).isEmpty
-            && (mode == .signup ? password.count >= minPassphrase : !password.isEmpty)
+            && (signingUp ? password.count >= minPassphrase && password == again : !password.isEmpty)
     }
 
     private func submit() {
@@ -1175,7 +1236,7 @@ private struct CategoriesSection: View {
     @State private var used: Set<String> = []
 
     var body: some View {
-        SettingsSection(title: S.t(.settingsCategories)) {
+        SettingsSection(title: S.t(.settingsCategories), glyph: .categories) {
             SegmentedStamp(
                 options: [
                     .init(value: EntryKind.spend, label: S.t(.captureSpend)),
@@ -1326,7 +1387,7 @@ private struct DisplaySection: View {
 
     var body: some View {
         let settings = store.ledger.settings
-        SettingsSection(title: S.t(.settingsAppearance)) {
+        SettingsSection(title: S.t(.settingsAppearance), glyph: .appearance) {
             VStack(alignment: .leading, spacing: Space.s2) {
                 Text(S.t(.settingsAppearance)).textStyle(.label)
                 SegmentedStamp(
@@ -1400,7 +1461,7 @@ private struct DataSection: View {
     @State private var error = ""
 
     var body: some View {
-        SettingsSection(title: S.t(.settingsData)) {
+        SettingsSection(title: S.t(.settingsData), glyph: .data) {
             HStack(spacing: Space.s3) {
                 QuietButton(S.t(.settingsExport)) { export() }
                 QuietButton(S.t(.settingsImport)) { importing = true }

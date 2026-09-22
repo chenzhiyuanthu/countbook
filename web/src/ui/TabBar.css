@@ -1,9 +1,10 @@
-/* Five words on a hairline. Navigation carries no icons, no fill and no badge;
-   the only state it shows is which word you are standing on. */
+/* Five words on a hairline, each with its mark above it. Navigation carries no
+   fill and no badge; the only state it shows is which word you are standing on,
+   and the mark takes the word's ink so it says nothing the word does not. */
 
 :root {
   /* Published for the toast and the 记 button, which anchor above the bar. */
-  --tabbar-h: calc(var(--l-hit-target) + var(--s-1));
+  --tabbar-h: calc(var(--l-hit-target) + var(--s-3));
 }
 
 .tabbar {
@@ -34,12 +35,17 @@
 .tabbar__tab {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: var(--s-1);
   min-height: var(--tabbar-h);
-  padding-block: var(--s-4);
+  padding-block: var(--s-2) var(--s-3);
   padding-inline: var(--s-1);
 }
+
+.tabbar__mark { color: var(--c-ink300); }
+.tabbar__mark--heavy { color: var(--c-ink900); }
 
 .tabbar__label {
   color: var(--c-ink500);

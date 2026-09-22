@@ -1102,7 +1102,49 @@ Adding a fifteenth requires an amendment to this document.
 | 13 | `square.and.arrow.up` | box open at top: 5,10 → 5,20 → 19,20 → 19,10; arrow 12,16 → 12,4 with head 8.5,7.5 → 12,4 → 15.5,7.5 | 导出本页 on the report (PNG / print). |
 | 14 | `exclamationmark` | line 12,5 → 12,14.5 plus a 2 × 2 square at 11,17.5 | The **only** error affordance: sync failure, a passphrase mismatch, a write failure. It renders in `--ink-900`, **not** in `--fig-over`, next to a 2px `--ink-900` left rule on the message row — because red is rationed to three uses and an error is not one of them. |
 
-### 8.4 Things that look like icons but are not
+### 8.4 The ornament set — a mark beside a word
+
+Added after a year of the rule above holding: the product read as austere to
+the point of sameness, and the owner asked for "a little decoration". The
+answer is a second set of line glyphs under the same authoring spec (§8.2),
+with a rule of their own: **an ornament sits beside a word and never replaces
+one.** Every mark below has the word next to it; remove the marks and nothing
+is lost but warmth.
+
+- **Where** — exactly two places. The tab bar: a 20 mark above each of the five
+  words, `--ink-300` at rest and the word's `--ink-900` when it is the current
+  tab or is alerting. A section title: a 16 mark before the label, always
+  `--ink-500`, on 设置 and 报告. Nowhere else — not the category grid (§8.1
+  stands: 餐饮 is faster to read than any picture of food), not rows, not
+  buttons, not the capture sheet.
+- **Never coloured**, never filled except the 2 × 2 dot, never animated.
+- **Source of truth** is `design/icons.json`; both clients draw from it
+  (`web/src/ui/icons.tsx` `Glyph`, `ios/Countbook/Design/Glyph.swift`). Paths
+  use absolute `M L H V Z` only, so the Swift reader stays tiny; a mark that
+  needs a curve uses a `circle`. A glyph that is not in that file does not exist.
+
+| Name | Where | Drawing |
+| --- | --- | --- |
+| `today` | tab 今日 | calendar page 4,6.5 → 20,20 with header rule at 10.5, rings at 8 and 16, a dot at 11,14 |
+| `ledger` | tab 账页 | three rules 5→19 at 6.5 and 12, 5→13 at 17.5 |
+| `report` | tab 报告 | bars to 13, 6, 10 from a baseline at 20.5 |
+| `wants` | tab 待购 | hourglass: two triangles meeting at 12,12 |
+| `settings` | tab 设置 | two sliders: rules at 8 and 16, knobs at 15 and 9 |
+| `standard` | 设置 标准线 | a measured line: 4→20 at 12 with end stops 8.5→15.5 |
+| `wish` | 设置 心愿物 | gem: diamond 12,4 · 20,10 · 12,20 · 4,10 with its girdle |
+| `sync` | 设置 多端同步 | two bent arrows chasing |
+| `categories` | 设置 分类 · 报告 分类 | four 6 × 6 squares |
+| `appearance` | 设置 外观 | circle r 7 split by a vertical rule |
+| `data` | 设置 数据 | the `tray.arrow.down` drawing |
+| `about` | 设置 关于 | circle r 8, rule 11→16.5, dot at 11,7 |
+| `cashflow` | 报告 收支 | an up arrow at 8 and a down arrow at 16 |
+| `regret` | 报告 后悔账 | circle r 8 with a rule 8→16 across it |
+| `deviation` | 报告 与标准的偏差 | a spine at 12 with bars to 18, 7, 16 |
+| `rate` | 报告 判定率 | the `checkmark` drawing |
+| `hours` | 报告 时段 | clock: circle r 8, hands 12,7 → 12,12 → 15.5,12 |
+| `year` | 报告 年账页 | the `today` calendar without its dot |
+
+### 8.5 Things that look like icons but are not
 
 | Thing | What it actually is |
 | --- | --- |

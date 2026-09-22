@@ -61,8 +61,11 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url)
   // Sync traffic must never be served from a cache: a stale ledger is worse
-  // than no ledger, and these responses are not ours to keep.
+  // than no ledger, and these responses are not ours to keep. That holds when
+  // the API is on another origin and, since the app moved onto the same box
+  // as its API, when it is under /api/ on this one.
   if (url.origin !== self.location.origin) return
+  if (url.pathname.startsWith(${JSON.stringify(base)} + 'api/')) return
 
   // A navigation is answered from the network when there is one, so a deploy is
   // picked up on the next launch, and from the cached shell when there is not.
@@ -79,7 +82,9 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Everything else is fingerprinted and immutable, so the cache is authoritative.
+  // Only what the build shipped is immutable; anything else this origin serves
+  // (the install page, a file added later) is answered by the network.
+  if (!PRECACHE.includes(url.pathname) && !url.pathname.startsWith(${JSON.stringify(base)} + 'assets/')) return
   event.respondWith(
     caches.match(request).then(
       (hit) =>

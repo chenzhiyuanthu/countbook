@@ -16,7 +16,7 @@
 | | |
 |---|---|
 | **网页版** | <https://countbook.chenzhiyuanthu.com>（自己的服务器，国内直连）；备用 <https://chenzhiyuanthu.github.io/countbook/>。PWA，可安装，离线可用 |
-| **iOS** | 原生 SwiftUI，零第三方包。`./scripts/ios-ipa.sh` 出一个已签名的 .ipa，装进已注册的设备；或 `open ios/Countbook.xcodeproj` 直接跑 |
+| **iOS** | 原生 SwiftUI，零第三方包。`./scripts/ios-ota.sh` 打包签名后发布到服务器，手机 Safari 打开 `countbook.chenzhiyuanthu.com/ota/` 点安装即可（流程见 `AGENTS.md`）；插线则 `./scripts/ios-ipa.sh` + `devicectl`，或 `open ios/Countbook.xcodeproj` 直接跑 |
 | **多端同步** | 网页和 API 同源部署在 `43.162.121.196`（`countbook.chenzhiyuanthu.com`），端到端加密。打开设置就是「自建服务器 · 登录」，输邮箱密码即可。也可切到 GitHub 私有仓库 |
 
 ---
@@ -89,6 +89,7 @@ python3 scripts/gen-icons.py      # 重新生成图标
 ./scripts/ios-check.sh test       # 跑 iOS 单元测试
 ./scripts/ios-run.sh out.png      # 装进模拟器、启动、截图
 ./scripts/ios-ipa.sh              # 归档并导出已签名的 .ipa
+./scripts/ios-ota.sh              # 打包 + 发布到服务器的 /ota/，手机 Safari 里点安装
 open ios/Countbook.xcodeproj      # 或者直接在 Xcode 里跑
 ```
 

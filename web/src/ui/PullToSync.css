@@ -1,0 +1,10 @@
+/* A strip at the head of the scroller that opens with the finger and closes
+   when the sync answers. It is height alone: no arrow, no spinner. */
+.pullsync {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  padding-bottom: var(--s-2);
+  transition: height var(--d-stamp-slide) var(--ease);
+}

@@ -26,6 +26,9 @@ targets:
       - path: Countbook
         excludes:
           - "**/.DS_Store"
+      # The ornament set is read at runtime from the one file both clients share.
+      - path: ../design/icons.json
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.czy.countbook
@@ -49,6 +52,8 @@ targets:
       - path: ../design/fixtures/money.json
         buildPhase: resources
       - path: ../design/fixtures/envelope.json
+        buildPhase: resources
+      - path: ../design/fixtures/fx.json
         buildPhase: resources
     dependencies:
       - target: Countbook

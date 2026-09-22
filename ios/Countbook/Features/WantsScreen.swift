@@ -265,6 +265,7 @@ struct WantsScreen: View {
             .padding(.vertical, Space.s6)
             .contentColumn()
         }
+        .syncRefresh()
         .background(Ink.paper)
         .task(id: model.pending) { await keepTime(while: model.pending) }
         .sheet(isPresented: $adding) {

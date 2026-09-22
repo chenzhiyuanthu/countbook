@@ -115,27 +115,35 @@ export async function syncServer(
   let merged = [...local]
   let pulled = 0
 
-  for (;;) {
-    const page = await call<{ events: { id: string; hlc: string; body: string }[]; cursor: number; hasMore: boolean }>(
-      cfg,
-      `/api/pull?since=${at}&limit=500`,
-    )
-    const decoded: Event[] = []
-    for (const row of page.events) {
-      if (row.id === MANIFEST_EVENT_ID) continue
-      try {
-        decoded.push(JSON.parse(await open(vk, fromBase64(row.body))) as Event)
-      } catch {
-        // One unreadable row must not stop the sync: it is far more likely to be
-        // an event written under a different passphrase than a real corruption,
-        // and the rest of the log is still perfectly usable.
+  // The cursor moves only over rows this device has actually read. The push
+  // reply also names the server's head, but taking that would skip whatever
+  // another device inserted between this pull and this push — and a skipped
+  // row is never asked for again.
+  const pull = async () => {
+    for (;;) {
+      const page = await call<{ events: { id: string; hlc: string; body: string }[]; cursor: number; hasMore: boolean }>(
+        cfg,
+        `/api/pull?since=${at}&limit=500`,
+      )
+      const decoded: Event[] = []
+      for (const row of page.events) {
+        if (row.id === MANIFEST_EVENT_ID) continue
+        try {
+          decoded.push(JSON.parse(await open(vk, fromBase64(row.body))) as Event)
+        } catch {
+          // One unreadable row must not stop the sync: it is far more likely to be
+          // an event written under a different passphrase than a real corruption,
+          // and the rest of the log is still perfectly usable.
+        }
       }
+      pulled += decoded.length
+      merged = merge(merged, decoded)
+      at = page.cursor
+      if (!page.hasMore) break
     }
-    pulled += decoded.length
-    merged = merge(merged, decoded)
-    at = page.cursor
-    if (!page.hasMore) break
   }
+
+  await pull()
 
   // Push everything we hold; the server discards ids it already has, so there
   // is no need to track which of ours it has seen.
@@ -150,8 +158,11 @@ export async function syncServer(
       body: JSON.stringify({ events: payload.slice(i, i + 500) }),
     })
     pushed += res.accepted
-    at = Math.max(at, res.cursor)
   }
+
+  // Read past our own rows now rather than next time, and catch anything that
+  // landed while we were pushing.
+  if (pushed > 0) await pull()
 
   return { merged, cursor: { cursor: at }, pulled, pushed }
 }

@@ -32,6 +32,58 @@ export const inMonth = (es: readonly EffectiveEntry[], m: Month) => es.filter((e
 export const inYear = (es: readonly EffectiveEntry[], y: string) => es.filter((e) => e.day.startsWith(y))
 const total = (es: readonly EffectiveEntry[]) => es.reduce((a, e) => a + e.effective, 0)
 
+/* ── 收支 — what came in against what went out ────────────────────────── */
+
+export interface IncomeRow {
+  categoryId: string
+  amount: Fen
+  count: number
+}
+
+export interface Cashflow {
+  income: Fen
+  spend: Fen
+  /** income − spend. Negative when the period cost more than it brought in. */
+  net: Fen
+  /** Where the income came from, largest first. Voided rows are not counted. */
+  incomeByCategory: IncomeRow[]
+}
+
+/**
+ * Every figure is the home-currency `effective` amount: a foreign receipt was
+ * converted when it was written (Entry.original keeps the receipt), so a
+ * month's total needs no rate and does not move when rates do. Income never
+ * touches 今日可用 — the standard is a spending line, not a budget (PRODUCT.md
+ * §5.1) — which is why this lives beside it rather than inside it.
+ */
+export function cashflow(L: Ledger, within: (e: EffectiveEntry) => boolean): Cashflow {
+  const rows = new Map<string, IncomeRow>()
+  let income = 0
+  let spend = 0
+  for (const e of effective(L).values()) {
+    if (!within(e)) continue
+    if (e.kind !== 'income') {
+      spend += e.effective
+      continue
+    }
+    income += e.effective
+    if (e.voidance) continue
+    const row = rows.get(e.categoryId) ?? { categoryId: e.categoryId, amount: 0, count: 0 }
+    row.amount += e.effective
+    row.count += 1
+    rows.set(e.categoryId, row)
+  }
+  return {
+    income,
+    spend,
+    net: income - spend,
+    incomeByCategory: [...rows.values()].sort((a, b) => b.amount - a.amount || a.categoryId.localeCompare(b.categoryId)),
+  }
+}
+
+export const cashflowOfMonth = (L: Ledger, m: Month): Cashflow => cashflow(L, (e) => monthOf(e.day) === m)
+export const cashflowOfYear = (L: Ledger, y: string): Cashflow => cashflow(L, (e) => e.day.startsWith(y))
+
 /* ── 今日可用 — the standing figure ──────────────────────────────────── */
 
 export interface Available {

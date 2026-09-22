@@ -115,3 +115,45 @@ private extension Character {
     // JavaScript's `\d` is ASCII-only; `isNumber` would also accept ٤ and ４.
     var isASCIIDigit: Bool { isASCII && isNumber }
 }
+
+// MARK: - foreign currency
+
+/// A rate is carried as millionths: 7.1234 → 7_123_400.
+let rateScale = 1_000_000
+
+/// Convert minor units of one currency into minor units of another at a rate
+/// in millionths, rounding half away from zero. Int is 64-bit on every device
+/// this runs on, and ¥999,999.99 at a four-figure rate stays well inside it;
+/// the web client does the same in BigInt and lands on the same 分 for the
+/// same inputs (design/fixtures/fx.json).
+func convert(_ amountMinor: Fen, rateMicro: Int) -> Fen {
+    let q = amountMinor * rateMicro
+    let half = rateScale / 2
+    return q >= 0 ? (q + half) / rateScale : -((-q + half) / rateScale)
+}
+
+/// "7.1234" — four decimals, trailing zeros trimmed down to two.
+func formatRate(_ rateMicro: Int) -> String {
+    let int = rateMicro / rateScale
+    var frac = String(rateMicro % rateScale)
+    frac = String(repeating: "0", count: max(0, 6 - frac.count)) + frac
+    frac = String(frac.prefix(4))
+    while frac.count > 2, frac.hasSuffix("0") { frac.removeLast() }
+    return "\(int).\(frac)"
+}
+
+/// Parse a typed rate ("7.12", "0.0431") into millionths; nil if it is not one.
+func parseRate(_ input: String) -> Int? {
+    let s = input.trimmingCharacters(in: .whitespaces)
+    guard !s.isEmpty else { return nil }
+    let pieces = s.split(separator: ".", omittingEmptySubsequences: false)
+    guard pieces.count <= 2 else { return nil }
+    let intPart = String(pieces[0])
+    let fracPart = pieces.count == 2 ? String(pieces[1]) : ""
+    guard !intPart.isEmpty, intPart.allSatisfy(\.isASCIIDigit), fracPart.count <= 6, fracPart.allSatisfy(\.isASCIIDigit),
+          let int = Int(intPart)
+    else { return nil }
+    let frac = Int(fracPart + String(repeating: "0", count: 6 - fracPart.count)) ?? 0
+    let micro = int * rateScale + frac
+    return micro > 0 ? micro : nil
+}

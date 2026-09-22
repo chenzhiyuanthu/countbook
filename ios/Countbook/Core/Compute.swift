@@ -69,6 +69,53 @@ func inYear(_ es: [EffectiveEntry], _ y: String) -> [EffectiveEntry] {
 
 private func total(_ es: [EffectiveEntry]) -> Fen { es.reduce(0) { $0 + $1.effective } }
 
+// MARK: - 收支 — what came in against what went out
+
+struct IncomeRow: Sendable, Equatable, Identifiable {
+    let categoryId: String
+    let amount: Fen
+    let count: Int
+    var id: String { categoryId }
+}
+
+struct Cashflow: Sendable, Equatable {
+    let income: Fen
+    let spend: Fen
+    /// income − spend. Negative when the period cost more than it brought in.
+    let net: Fen
+    /// Where the income came from, largest first. Voided rows are not counted.
+    let incomeByCategory: [IncomeRow]
+}
+
+/// Every figure is the home-currency `effective` amount: a foreign receipt was
+/// converted when it was written (Entry.original keeps the receipt), so a
+/// month's total needs no rate and does not move when rates do. Income never
+/// touches 今日可用 — the standard is a spending line, not a budget (PRODUCT.md
+/// §5.1) — which is why this lives beside it rather than inside it. Mirrors
+/// web/src/core/compute.ts `cashflow`.
+func cashflow(_ L: Ledger, within: (EffectiveEntry) -> Bool) -> Cashflow {
+    var amounts: [String: Fen] = [:]
+    var counts: [String: Int] = [:]
+    var income: Fen = 0
+    var spend: Fen = 0
+    for e in effective(L).values where within(e) {
+        if e.kind != .income {
+            spend += e.effective
+            continue
+        }
+        income += e.effective
+        if e.voidance != nil { continue }
+        amounts[e.categoryId, default: 0] += e.effective
+        counts[e.categoryId, default: 0] += 1
+    }
+    let rows = amounts.map { IncomeRow(categoryId: $0.key, amount: $0.value, count: counts[$0.key] ?? 0) }
+        .sorted { a, b in a.amount != b.amount ? a.amount > b.amount : a.categoryId < b.categoryId }
+    return Cashflow(income: income, spend: spend, net: income - spend, incomeByCategory: rows)
+}
+
+func cashflowOfMonth(_ L: Ledger, _ m: Month) -> Cashflow { cashflow(L) { monthOf($0.day) == m } }
+func cashflowOfYear(_ L: Ledger, _ y: String) -> Cashflow { cashflow(L) { $0.day.hasPrefix(y) } }
+
 // MARK: - 今日可用 — the standing figure
 
 struct Available: Sendable, Equatable {

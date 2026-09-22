@@ -76,4 +76,6 @@ export const KEYS = {
   device: 'countbook.device',
   theme: 'countbook.theme',
   passphraseHint: 'countbook.fingerprint',
+  fx: 'countbook.fx',
+  fxLast: 'countbook.fxLast',
 } as const

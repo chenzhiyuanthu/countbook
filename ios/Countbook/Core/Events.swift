@@ -14,7 +14,7 @@ enum Payload: Equatable, Sendable {
     case entryAdd(entry: Entry)
     case entryPatch(target: String, patch: EntryPatch)
     case entryRemove(target: String)
-    case entryCorrect(target: String, amount: Fen, reason: String)
+    case entryCorrect(target: String, amount: Fen, reason: String, original: ForeignAmount? = nil)
     case entryVoid(target: String, reason: String)
     case reviewJudge(target: String, worthIt: Bool)
     case reviewDefer(target: String)
@@ -64,7 +64,7 @@ extension Payload: Codable {
     // it — so the coding is written out by hand.
     enum CodingKeys: String, CodingKey {
         case t, entry, target, patch, amount, reason, worthIt, wish, outcome
-        case entryId, sub, status, day, monthlyFen, perCategory, category, on
+        case entryId, sub, status, day, monthlyFen, perCategory, category, on, original
     }
 
     init(from decoder: Decoder) throws {
@@ -84,7 +84,8 @@ extension Payload: Codable {
             self = .entryCorrect(
                 target: try c.decode(String.self, forKey: .target),
                 amount: try c.decode(Fen.self, forKey: .amount),
-                reason: try c.decode(String.self, forKey: .reason)
+                reason: try c.decode(String.self, forKey: .reason),
+                original: try c.decodeIfPresent(ForeignAmount.self, forKey: .original)
             )
         case "entry.void":
             self = .entryVoid(
@@ -156,10 +157,11 @@ extension Payload: Codable {
         case .entryPatch(let target, let patch):
             try c.encode(target, forKey: .target)
             try c.encode(patch, forKey: .patch)
-        case .entryCorrect(let target, let amount, let reason):
+        case .entryCorrect(let target, let amount, let reason, let original):
             try c.encode(target, forKey: .target)
             try c.encode(amount, forKey: .amount)
             try c.encode(reason, forKey: .reason)
+            try c.encodeIfPresent(original, forKey: .original)
         case .entryVoid(let target, let reason):
             try c.encode(target, forKey: .target)
             try c.encode(reason, forKey: .reason)

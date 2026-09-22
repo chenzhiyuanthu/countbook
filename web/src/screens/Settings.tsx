@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, ReactNode } from 'react'
 import { useStore } from '../app/store'
 import { thisDeviceId, thisDeviceLabel, useSync } from '../app/sync'
+import type { SyncConfig } from '../app/sync'
 import { WEEKDAYS } from '../app/i18n'
 import { proposeStandard, standardAt } from '../core/compute'
 import { addDays, diffDays, toDay } from '../core/date'
@@ -16,6 +17,7 @@ import { listDevices, login, revokeDevice, signup } from '../sync/server'
 import { DEFAULT_SERVER_URL } from '../sync/config'
 import type { DeviceRow, ServerConfig } from '../sync/server'
 import { Button, Field, Label, Rule, Segmented, Stepper } from '../ui/primitives'
+import { Glyph, type GlyphName } from '../ui/icons'
 import { Money } from '../ui/Money'
 import './Settings.css'
 
@@ -45,11 +47,21 @@ const sameAmounts = (a: Record<string, Fen>, b: Record<string, Fen>): boolean =>
   return ka.length === kb.length && ka.every((k) => a[k] === b[k])
 }
 
-function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+function Section({
+  title, glyph, action, children,
+}: {
+  title: string
+  glyph?: GlyphName
+  action?: ReactNode
+  children: ReactNode
+}) {
   return (
     <section className="settings__section">
       <div className="settings__head">
-        <Label>{title}</Label>
+        <span className="settings__title-row">
+          {glyph ? <span className="settings__glyph"><Glyph name={glyph} /></span> : null}
+          <Label>{title}</Label>
+        </span>
         {action ?? null}
       </div>
       <Rule strong />
@@ -180,7 +192,7 @@ function StandardSection() {
   const revisions = useMemo(() => [...ledger.standards].reverse(), [ledger.standards])
 
   return (
-    <Section title={t('standard.title')}>
+    <Section title={t('standard.title')} glyph="standard">
       {current.monthlyFen === 0 ? <p className="t-body settings__hint">{t('standard.empty')}</p> : null}
 
       <div className="settings__stack">
@@ -338,7 +350,7 @@ function WishSection() {
   const canSave = trimmed.length > 0 && priceFen !== null && priceFen > 0 && changed
 
   return (
-    <Section title={t('settings.wishObject')}>
+    <Section title={t('settings.wishObject')} glyph="wish">
       <p className="t-body ink-500">{t('settings.wishObjectHint')}</p>
       <div className="settings__stack">
         <Field label={t('settings.wishName')} value={name} onChange={setName} maxLength={12} />
@@ -387,7 +399,7 @@ function DisplaySection() {
   const { t, ledger, commit } = useStore()
   const settings = ledger.settings
   return (
-    <Section title={t('settings.appearance')}>
+    <Section title={t('settings.appearance')} glyph="appearance">
       <div className="settings__stack">
         <div>
           <Label>{t('settings.appearance')}</Label>
@@ -463,7 +475,7 @@ function CategoriesSection() {
   }
 
   return (
-    <Section title={t('settings.categories')}>
+    <Section title={t('settings.categories')} glyph="categories">
       <Segmented
         ariaLabel={t('settings.categories')}
         value={kind}
@@ -519,25 +531,29 @@ function CategoriesSection() {
 
 function SyncSection() {
   const { t } = useStore()
-  const { phase, config, fingerprint, message, lastSyncedAt, syncNow, disconnect, unlock } = useSync()
+  const { phase, config, fingerprint, message, authExpired, lastSyncedAt, syncNow, disconnect } = useSync()
+  const [advanced, setAdvanced] = useState(false)
 
   if (phase === 'off' || !config) {
     return (
-      <Section title={t('sync.title')}>
+      <Section title={t('sync.title')} glyph="sync">
         <p className="t-body ink-700">{t('sync.offNote')}</p>
         <ConnectForms />
       </Section>
     )
   }
 
-  if (phase === 'locked') {
+  // A lost key and an expired session are the same ask — the password — and
+  // are asked for in the same words as the first time, not as an "unlock".
+  const leave = config.kind === 'server' ? t('sync.logout') : t('sync.disconnect')
+  if (phase === 'locked' || authExpired) {
     return (
-      <Section title={t('sync.title')}>
-        <p className="t-body ink-700">{t('sync.locked')}</p>
-        <UnlockForm onUnlock={unlock} />
+      <Section title={t('sync.title')} glyph="sync">
+        <p className="t-body ink-700">{t('sync.relogin')}</p>
+        <ReloginForm config={config} />
         <div className="settings__actions">
           <Button variant="danger" onClick={disconnect}>
-            {t('sync.disconnect')}
+            {leave}
           </Button>
         </div>
       </Section>
@@ -555,9 +571,9 @@ function SyncSection() {
           : t('sync.synced')
 
   return (
-    <Section title={t('sync.title')} action={<span className="t-mono t-label ink-700">{state}</span>}>
+    <Section title={t('sync.title')} glyph="sync" action={<span className="t-mono t-label ink-700">{state}</span>}>
       <div className="settings__row">
-        <span className="t-body">{config.kind === 'github' ? t('sync.github') : t('sync.server')}</span>
+        <span className="t-body">{config.kind === 'github' ? t('sync.github') : t('sync.account')}</span>
         <span className="t-mono t-label ink-500">
           {config.kind === 'github' ? `${config.owner}/${config.repo}` : config.email}
         </span>
@@ -572,14 +588,19 @@ function SyncSection() {
         </Button>
       </div>
 
-      {fingerprint ? <Fingerprint value={fingerprint} /> : null}
       {config.kind === 'server' ? <Devices cfg={config} /> : null}
+
+      {/* The fingerprint is a diagnostic, not a step: it stays behind a fold. */}
+      <div className="settings__block">
+        <LinkButton onClick={() => setAdvanced((v) => !v)}>{t('sync.advanced')}</LinkButton>
+        {advanced && fingerprint ? <Fingerprint value={fingerprint} /> : null}
+      </div>
 
       <div className="settings__block">
         <p className="t-body ink-500">{t('sync.disconnectHint')}</p>
         <div className="settings__actions">
           <Button variant="danger" onClick={disconnect}>
-            {t('sync.disconnect')}
+            {leave}
           </Button>
         </div>
       </div>
@@ -660,27 +681,44 @@ function Devices({ cfg }: { cfg: ServerConfig }) {
   )
 }
 
-function UnlockForm({ onUnlock }: { onUnlock: (passphrase: string) => Promise<void> }) {
+/**
+ * The password once more. For the server this is a real login — a fresh token
+ * and the key re-derived in one press — so an expired session and a lost key
+ * are cured by the same form. The GitHub vault has no session; only the key.
+ */
+function ReloginForm({ config }: { config: SyncConfig }) {
   const { t } = useStore()
-  const [pass, setPass] = useState('')
+  const { connectServer, unlock } = useSync()
+  const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
   const submit = () => {
     setBusy(true)
     setError('')
-    onUnlock(pass)
-      .catch((e: unknown) => setError(reason(e)))
-      .finally(() => setBusy(false))
+    const go =
+      config.kind === 'server'
+        ? login(config.baseUrl, config.email, password, thisDeviceId(), thisDeviceLabel()).then((s) =>
+            connectServer({ baseUrl: config.baseUrl, token: s.token, email: config.email }, password, true),
+          )
+        : unlock(password)
+    go.catch((e: unknown) => setError(reason(e))).finally(() => setBusy(false))
   }
 
+  const server = config.kind === 'server'
   return (
     <div className="settings__stack">
-      <Field label={t('sync.passphrase')} value={pass} onChange={setPass} type="password" />
+      <Field
+        label={server ? t('sync.password') : t('sync.passphrase')}
+        value={password}
+        onChange={setPassword}
+        type="password"
+        name="current-password"
+      />
       {error ? <p className="t-body ink-700">{error}</p> : null}
       <div className="settings__actions">
-        <Button variant="primary" onClick={submit} disabled={busy || pass.length < MIN_PASSPHRASE}>
-          {busy ? t('sync.connecting') : t('sync.unlock')}
+        <Button variant="primary" onClick={submit} disabled={busy || password.length === 0}>
+          {busy ? t('sync.connecting') : server ? t('sync.login') : t('sync.unlock')}
         </Button>
       </div>
     </div>
@@ -713,27 +751,24 @@ function PassphrasePair({
   )
 }
 
+/**
+ * An account is the door; the GitHub vault is a side entrance reached by a
+ * link, not a choice presented up front. Most people should never see it.
+ */
 function ConnectForms() {
-  const { t } = useStore()
   const [kind, setKind] = useState<'github' | 'server'>('server')
   return (
     <div className="settings__block">
-      <Label>{t('sync.choose')}</Label>
-      <Segmented
-        ariaLabel={t('sync.choose')}
-        value={kind}
-        onChange={setKind}
-        options={[
-          { value: 'server', label: t('sync.server') },
-          { value: 'github', label: t('sync.github') },
-        ]}
-      />
-      {kind === 'github' ? <GitHubForm /> : <ServerForm />}
+      {kind === 'github' ? (
+        <GitHubForm onServer={() => setKind('server')} />
+      ) : (
+        <ServerForm onGitHub={() => setKind('github')} />
+      )}
     </div>
   )
 }
 
-function GitHubForm() {
+function GitHubForm({ onServer }: { onServer: () => void }) {
   const { t } = useStore()
   const { connectGitHub } = useSync()
   const [owner, setOwner] = useState('')
@@ -778,71 +813,104 @@ function GitHubForm() {
           {busy ? t('sync.connecting') : t('sync.connect')}
         </Button>
       </div>
+      <div className="settings__actions">
+        <LinkButton onClick={onServer}>{t('sync.useServer')}</LinkButton>
+      </div>
     </div>
   )
 }
 
-function ServerForm() {
+/**
+ * Email, password, one button — the shape of every login form, which is the
+ * point. Signup is a link beneath it; the server address and the GitHub
+ * alternative are behind 高级, because the address is already right.
+ */
+function ServerForm({ onGitHub }: { onGitHub: () => void }) {
   const { t } = useStore()
   const { connectServer } = useSync()
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [url, setUrl] = useState(DEFAULT_SERVER_URL)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [again, setAgain] = useState('')
   const [code, setCode] = useState('')
+  const [advanced, setAdvanced] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const signingUp = mode === 'signup'
 
   // One secret, not two. The account password authenticates to the server and
   // also derives the vault key, so there is a single thing to remember. Because
   // the server necessarily receives the password to verify it, the operator of
   // the box could in principle derive the key — on a personal single-tenant
   // server that operator is you. What it does buy is that a stolen database is
-  // ciphertext plus a scrypt hash, not a readable ledger. Signup needs 8+ for
-  // that reason; login trusts whatever the account already has.
+  // ciphertext plus a scrypt hash, not a readable ledger. Signup needs 8+ and a
+  // second typing for that reason — there is no reset for a key; login trusts
+  // whatever the account already has.
+  const problem =
+    signingUp && password.length > 0 && password.length < MIN_PASSPHRASE
+      ? t('sync.passwordShort')
+      : signingUp && again.length > 0 && password !== again
+        ? t('sync.passwordMismatch')
+        : ''
   const ready =
     url.trim().length > 0 &&
     email.trim().length > 0 &&
-    (mode === 'signup' ? password.length >= MIN_PASSPHRASE : password.length > 0)
+    (signingUp ? password.length >= MIN_PASSPHRASE && password === again : password.length > 0)
 
   const submit = () => {
     setBusy(true)
     setError('')
     const base = url.trim().replace(/\/+$/, '')
     const account = email.trim()
-    const auth =
-      mode === 'signup'
-        ? signup(base, account, password, code.trim(), thisDeviceId(), thisDeviceLabel())
-        : login(base, account, password, thisDeviceId(), thisDeviceLabel())
+    const auth = signingUp
+      ? signup(base, account, password, code.trim(), thisDeviceId(), thisDeviceLabel())
+      : login(base, account, password, thisDeviceId(), thisDeviceLabel())
     auth
       .then((session) => connectServer({ baseUrl: base, token: session.token, email: account }, password, true))
       .catch((e: unknown) => setError(reason(e)))
       .finally(() => setBusy(false))
   }
 
+  const flip = () => {
+    setMode(signingUp ? 'login' : 'signup')
+    setError('')
+  }
+
   return (
     <div className="settings__stack">
-      <p className="t-body ink-500">{t('sync.serverHint')}</p>
-      <Segmented
-        ariaLabel={t('sync.server')}
-        value={mode}
-        onChange={setMode}
-        options={[
-          { value: 'login', label: t('sync.login') },
-          { value: 'signup', label: t('sync.signup') },
-        ]}
+      <Field label={t('sync.email')} value={email} onChange={setEmail} mono name="email" />
+      <Field
+        label={t('sync.password')}
+        value={password}
+        onChange={setPassword}
+        type="password"
+        name={signingUp ? 'new-password' : 'current-password'}
       />
-      <Field label={t('sync.serverUrl')} value={url} onChange={setUrl} mono placeholder="https://" />
-      <Field label={t('sync.email')} value={email} onChange={setEmail} mono />
-      <Field label={t('sync.password')} value={password} onChange={setPassword} type="password" />
-      {mode === 'signup' ? <Field label={t('sync.code')} value={code} onChange={setCode} mono /> : null}
-      <p className="t-body ink-500">{t('sync.serverKeyHint')}</p>
+      {signingUp ? (
+        <>
+          <Field label={t('sync.passwordAgain')} value={again} onChange={setAgain} type="password" />
+          <Field label={t('sync.code')} value={code} onChange={setCode} mono />
+        </>
+      ) : null}
+      <p className="t-body ink-500">{t('sync.passwordHint')}</p>
+      {problem ? <p className="t-body ink-700">{problem}</p> : null}
       {error ? <p className="t-body ink-700">{error}</p> : null}
       <div className="settings__actions">
         <Button variant="primary" fullWidth onClick={submit} disabled={busy || !ready}>
-          {busy ? t('sync.connecting') : mode === 'signup' ? t('sync.signup') : t('sync.login')}
+          {busy ? t('sync.connecting') : signingUp ? t('sync.signup') : t('sync.login')}
         </Button>
       </div>
+      <div className="settings__actions">
+        <LinkButton onClick={flip}>{signingUp ? t('sync.haveAccount') : t('sync.noAccount')}</LinkButton>
+        <LinkButton onClick={() => setAdvanced((v) => !v)}>{t('sync.advanced')}</LinkButton>
+      </div>
+      {advanced ? (
+        <div className="settings__stack">
+          <Field label={t('sync.serverUrl')} value={url} onChange={setUrl} mono placeholder="https://" />
+          <LinkButton onClick={onGitHub}>{t('sync.useGithub')}</LinkButton>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -931,7 +999,7 @@ function DataSection() {
   }
 
   return (
-    <Section title={t('settings.data')}>
+    <Section title={t('settings.data')} glyph="data">
       <div className="settings__actions">
         <Button onClick={exportAll}>{t('settings.export')}</Button>
         <label className="settings__file t-body">

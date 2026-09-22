@@ -8,14 +8,40 @@ import type { Day } from './date'
  */
 export type Intent = 'need' | 'want' | 'impulse'
 
+/**
+ * `income` is the wire name for the second kind of entry; in the product it is
+ * an investment result — a gain or, unlike a salary, a loss — and is labelled
+ * 投资 everywhere a person reads it. The name stays because events already
+ * carry it and a rename would be a schema change for nothing.
+ */
 export type EntryKind = 'spend' | 'income'
+
+/**
+ * What was actually paid or received when that was not in the ledger's own
+ * currency: the foreign figure and the rate it was carried across at. The
+ * rate is an integer number of millionths (7.1234 → 7_123_400) so both
+ * platforms convert with the same integer arithmetic (money.ts `convert`).
+ */
+export interface ForeignAmount {
+  currency: string
+  /** Minor units of `currency` — cents for USD — never a float. */
+  amount: Fen
+  rateMicro: number
+}
 
 export interface Entry {
   id: string
   kind: EntryKind
-  /** Always positive; `kind` carries the direction. */
+  /**
+   * Always in `currency`. Positive for a spend (`kind` carries the direction);
+   * for an investment, negative is a loss — the one place the ledger keeps a
+   * signed figure, because a loss is a result, not a purchase.
+   */
   amount: Fen
+  /** The ledger's home currency (settings.currency at the time of writing). */
   currency: string
+  /** Present when the money changed hands in another currency; `amount` is its conversion. */
+  original?: ForeignAmount
   categoryId: string
   /** Required on spend, null on income — there is nothing to judge about a salary. */
   intent: Intent | null
@@ -44,9 +70,12 @@ export interface Entry {
 export interface Correction {
   id: string
   targetId: string
+  /** The corrected figure in the ledger's currency — what every total uses. */
   amount: Fen
   reason: string
   at: number
+  /** The corrected receipt, when the entry was paid in another currency. */
+  original?: ForeignAmount
 }
 
 export interface Voidance {

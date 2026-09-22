@@ -15,6 +15,15 @@
   pointer-events: none;
 }
 
+/* Where the 记 button is drawn the toast sits above it rather than under it:
+   the button's height, the gap it keeps above the tab bar, and one step. */
+.app--capture .toast-slot {
+  bottom: calc(
+    var(--tabbar-h, calc(var(--l-hit-target) + var(--s-1))) + env(safe-area-inset-bottom) +
+      var(--s-4) + var(--s-9) + var(--s-2) + var(--s-2)
+  );
+}
+
 .toast {
   pointer-events: auto;
   touch-action: none;

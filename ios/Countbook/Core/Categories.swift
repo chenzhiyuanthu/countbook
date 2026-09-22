@@ -18,12 +18,17 @@ let DEFAULT_CATEGORIES: [Category] = [
     Category(id: "sub", name: "订阅", nameEn: "Subs", kind: .spend, order: 11),
     Category(id: "other", name: "其他", nameEn: "Other", kind: .spend, order: 12),
 
-    Category(id: "salary", name: "工资", nameEn: "Salary", kind: .income, order: 0),
-    Category(id: "bonus", name: "奖金", nameEn: "Bonus", kind: .income, order: 1),
-    Category(id: "invest", name: "投资", nameEn: "Investment", kind: .income, order: 2),
-    Category(id: "side", name: "兼职", nameEn: "Side work", kind: .income, order: 3),
-    Category(id: "gift", name: "红包", nameEn: "Gift", kind: .income, order: 4),
-    Category(id: "other-in", name: "其他", nameEn: "Other", kind: .income, order: 5),
+    // 投资 — the second kind of entry is an investment result, gain or loss.
+    Category(id: "stock", name: "股票", nameEn: "Stocks", kind: .income, order: 0),
+    Category(id: "fund", name: "基金", nameEn: "Funds", kind: .income, order: 1),
+    Category(id: "wealth", name: "理财", nameEn: "Wealth products", kind: .income, order: 2),
+    Category(id: "other-in", name: "其他", nameEn: "Other", kind: .income, order: 3),
+    // The earlier income set is kept only so a row filed under it keeps its label.
+    Category(id: "salary", name: "工资", nameEn: "Salary", kind: .income, order: 10, archived: true),
+    Category(id: "bonus", name: "奖金", nameEn: "Bonus", kind: .income, order: 11, archived: true),
+    Category(id: "invest", name: "投资", nameEn: "Investment", kind: .income, order: 12, archived: true),
+    Category(id: "side", name: "兼职", nameEn: "Side work", kind: .income, order: 13, archived: true),
+    Category(id: "gift", name: "红包", nameEn: "Gift", kind: .income, order: 14, archived: true),
 ]
 
 let DEFAULT_SETTINGS = Settings(

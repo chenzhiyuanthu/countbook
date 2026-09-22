@@ -39,7 +39,9 @@ say "2/6  Building the web app and uploading everything to ${REMOTE_DIR}"
 export COPYFILE_DISABLE=1   # keep macOS ._ files out of the tarball
 tar czf - -C "$HERE" package.json server.js Dockerfile docker-compose.yml caddy \
   | "${SSH[@]}" "$TARGET" "tar xzf - -C ${REMOTE_DIR}"
-"${SSH[@]}" "$TARGET" "rm -rf ${REMOTE_DIR}/web && mkdir -p ${REMOTE_DIR}/web"
+# Clear the contents rather than the directory: it is bind-mounted into the
+# running container, and web/ota holds the iOS build published by ios-ota.sh.
+"${SSH[@]}" "$TARGET" "mkdir -p ${REMOTE_DIR}/web && find ${REMOTE_DIR}/web -mindepth 1 -maxdepth 1 ! -name ota -exec rm -rf {} +"
 tar czf - -C "$HERE/../web/dist" . \
   | "${SSH[@]}" "$TARGET" "tar xzf - -C ${REMOTE_DIR}/web && find ${REMOTE_DIR}/web -name '._*' -delete"
 echo "  uploaded server + web build"

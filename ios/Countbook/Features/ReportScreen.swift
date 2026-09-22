@@ -48,6 +48,8 @@ private struct ReportModel: Equatable {
     var lateCount = 0
     var lateSum: Fen = 0
     var yearMonths: [YearLedgerRow] = []
+    var flow = Cashflow(income: 0, spend: 0, net: 0, incomeByCategory: [])
+    var yearFlow = Cashflow(income: 0, spend: 0, net: 0, incomeByCategory: [])
 
     /// Pure in its arguments: the clock and the fold are read by the caller, so
     /// this can be reasoned about — and, if it ever needs to, moved off the main
@@ -76,6 +78,9 @@ private struct ReportModel: Equatable {
         m.recordedDays = days.count
 
         for (id, c) in L.categories { m.names[id] = english ? c.nameEn : c.name }
+
+        m.flow = cashflowOfMonth(L, month)
+        m.yearFlow = cashflowOfYear(L, year)
 
         let r = regret(L, asOf)
         m.regretMonth = r.month
@@ -221,6 +226,7 @@ struct ReportScreen: View {
                         .contentColumn()
                 }
             }
+            .syncRefresh()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Ink.paper)
@@ -294,10 +300,18 @@ struct ReportScreen: View {
 
     @ViewBuilder
     private func page(_ m: ReportModel) -> some View {
+        // Plain arithmetic, not a judgement, so it is not held behind the
+        // fortnight the rest of the page waits for.
         if m.recordedDays < minRecordedDays {
-            EmptyStateView(title: S.t(.reportEmpty))
+            VStack(alignment: .leading, spacing: 0) {
+                cashflowSection(m)
+                Hairline(.strong)
+                EmptyStateView(title: S.t(.reportEmpty))
+            }
         } else {
             VStack(alignment: .leading, spacing: 0) {
+                cashflowSection(m)
+                Hairline(.strong)
                 regretHead(m)
                 deviationSection(m)
                 rateSection(m)
@@ -309,11 +323,53 @@ struct ReportScreen: View {
         }
     }
 
+    /// What came in, what went out, and the difference, in the ledger's
+    /// currency. A foreign receipt was converted when it was written, so nothing
+    /// here depends on today's rate. Mirrors the web Report's 收支 section.
+    private func cashflowSection(_ m: ReportModel) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: Space.s2) {
+                Glyph(name: .cashflow).foregroundStyle(Ink.ink500)
+                Text(S.t(.reportCashflow))
+                    .textStyle(.label)
+                    .accessibilityAddTraits(.isHeader)
+            }
+            .padding(.top, Space.s6)
+            .padding(.bottom, Space.s3)
+            CashflowFigures(flow: m.flow, currency: m.currency)
+            if !m.flow.incomeByCategory.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(S.t(.reportIncomeBy)).textStyle(.label).padding(.bottom, Space.s2)
+                    ForEach(m.flow.incomeByCategory) { row in
+                        HStack(alignment: .firstTextBaseline, spacing: Space.s4) {
+                            Text(m.names[row.categoryId] ?? row.categoryId).textStyle(.body, ink: Ink.ink700)
+                            Spacer(minLength: Space.s4)
+                            MoneyView(fen: row.amount, size: .body, currency: m.currency)
+                        }
+                        .frame(minHeight: Space.s7)
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                .padding(.top, Space.s4)
+            }
+            YearFlowLine(flow: m.yearFlow, currency: m.currency)
+                .padding(.top, Space.s4)
+        }
+        .padding(.bottom, Space.s6)
+    }
+
     /// P1 and P2. The only place in the product 后悔 is printed, and the only
     /// place `figRegret` is spent: a figure that never earns the live red is
     /// more damning than one that shouts.
     private func regretHead(_ m: ReportModel) -> some View {
         VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: Space.s2) {
+                Glyph(name: .regret).foregroundStyle(Ink.ink500)
+                Text(S.t(.reportRegretTitle))
+                    .textStyle(.label)
+                    .accessibilityAddTraits(.isHeader)
+            }
+            .padding(.bottom, Space.s3)
             RegretFigures(month: m.regretMonth, year: m.regretYear, currency: m.currency)
             if let name = m.wishName {
                 VStack(alignment: .leading, spacing: Space.s3) {
@@ -332,7 +388,7 @@ struct ReportScreen: View {
     }
 
     private func deviationSection(_ m: ReportModel) -> some View {
-        ReportSection(title: S.t(.reportDeviation)) {
+        ReportSection(title: S.t(.reportDeviation), glyph: .deviation) {
             if m.deviations.isEmpty {
                 GateLine(text: S.t(.reportNoStandard))
             } else if m.deviationShort > 0 {
@@ -346,13 +402,13 @@ struct ReportScreen: View {
     /// The chart states its own shortfall — 30 verdicts before a rate means
     /// anything — so the gate lives inside the block rather than beside it.
     private func rateSection(_ m: ReportModel) -> some View {
-        ReportSection(title: S.t(.reportRate)) {
+        ReportSection(title: S.t(.reportRate), glyph: .rate) {
             RegretBlocksView(judged: m.judged, notWorth: m.notWorth)
         }
     }
 
     private func categorySection(_ m: ReportModel) -> some View {
-        ReportSection(title: S.t(.reportByCategory)) {
+        ReportSection(title: S.t(.reportByCategory), glyph: .categories) {
             if m.categoryRows.isEmpty {
                 GateLine(text: S.t(.reportTableEmpty), ink: Ink.ink500)
             } else if dynamicType.isAccessibilitySize {
@@ -371,7 +427,7 @@ struct ReportScreen: View {
     }
 
     private func hourSection(_ m: ReportModel) -> some View {
-        ReportSection(title: S.t(.reportHours)) {
+        ReportSection(title: S.t(.reportHours), glyph: .hours) {
             if m.hourTotal < minHourSample {
                 GateLine(text: S.t(.reportHourGate, ["n": minHourSample - m.hourTotal]))
             } else {
@@ -390,7 +446,7 @@ struct ReportScreen: View {
     }
 
     private func yearSection(_ m: ReportModel) -> some View {
-        ReportSection(title: S.t(.reportYear)) {
+        ReportSection(title: S.t(.reportYear), glyph: .year) {
             Text(String(month.prefix(4)))
                 .textStyle(.label, mono: true)
         } content: {
@@ -432,6 +488,81 @@ private struct RegretFigures: View {
             MoneyView(fen: fen, size: .section, tone: .regret, currency: currency)
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - 收支 figures
+
+/// Income, spending and the difference, at section size; the difference wears
+/// the live red only when it is negative — the one colour role it can earn.
+@MainActor
+private struct CashflowFigures: View {
+    let flow: Cashflow
+    let currency: String
+
+    @Environment(\.dynamicTypeSize) private var dynamicType
+
+    /// Three figures at section size do not fit a phone in one row, so they
+    /// wrap as whole figures: all three, then two and one, then a column.
+    var body: some View {
+        if dynamicType.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: Space.s6) { income; spend; net }
+        } else {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: Space.s7) { income; spend; net }
+                VStack(alignment: .leading, spacing: Space.s6) {
+                    HStack(alignment: .top, spacing: Space.s7) { income; spend }
+                    net
+                }
+                VStack(alignment: .leading, spacing: Space.s6) { income; spend; net }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var income: some View { figure(S.t(.reportIncome), flow.income, tone: nil) }
+    private var spend: some View { figure(S.t(.reportSpend), flow.spend, tone: nil) }
+    private var net: some View { figure(S.t(.reportNet), flow.net, tone: flow.net < 0 ? .over : nil) }
+
+    private func figure(_ label: String, _ fen: Fen, tone: MoneyTone?) -> some View {
+        VStack(alignment: .leading, spacing: Space.s2) {
+            Text(label).textStyle(.label)
+            MoneyView(fen: fen, size: .section, tone: tone, currency: currency)
+        }
+        .fixedSize()
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// The year's three figures on one line, wrapping as whole items.
+@MainActor
+private struct YearFlowLine: View {
+    let flow: Cashflow
+    let currency: String
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: Space.s5) { items }
+            VStack(alignment: .leading, spacing: Space.s1) { items }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var items: some View {
+        Text(S.t(.reportThisYear)).textStyle(.label)
+        item(S.t(.reportIncome), flow.income, tone: nil)
+        item(S.t(.reportSpend), flow.spend, tone: nil)
+        item(S.t(.reportNet), flow.net, tone: flow.net < 0 ? .over : nil)
+    }
+
+    private func item(_ label: String, _ fen: Fen, tone: MoneyTone?) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: Space.s2) {
+            Text(label).textStyle(.label)
+            MoneyView(fen: fen, size: .body, tone: tone, currency: currency)
+        }
+        .fixedSize()
     }
 }
 
@@ -531,15 +662,18 @@ private struct CategoryBlock: View {
 @MainActor
 private struct ReportSection<Trailing: View, Content: View>: View {
     let title: String
+    var glyph: GlyphName?
     @ViewBuilder var trailing: Trailing
     @ViewBuilder var content: Content
 
     init(
         title: String,
+        glyph: GlyphName? = nil,
         @ViewBuilder trailing: () -> Trailing,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
+        self.glyph = glyph
         self.trailing = trailing()
         self.content = content()
     }
@@ -548,9 +682,13 @@ private struct ReportSection<Trailing: View, Content: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             Hairline(.strong)
             HStack(alignment: .firstTextBaseline, spacing: Space.s3) {
-                Text(title)
-                    .textStyle(.label)
-                    .accessibilityAddTraits(.isHeader)
+                HStack(alignment: .center, spacing: Space.s2) {
+                    // A section's mark sits before its title, in the title's own grey.
+                    if let glyph { Glyph(name: glyph).foregroundStyle(Ink.ink500) }
+                    Text(title)
+                        .textStyle(.label)
+                        .accessibilityAddTraits(.isHeader)
+                }
                 Spacer(minLength: Space.s3)
                 trailing
             }
@@ -564,8 +702,8 @@ private struct ReportSection<Trailing: View, Content: View>: View {
 }
 
 private extension ReportSection where Trailing == EmptyView {
-    init(title: String, @ViewBuilder content: () -> Content) {
-        self.init(title: title, trailing: { EmptyView() }, content: content)
+    init(title: String, glyph: GlyphName? = nil, @ViewBuilder content: () -> Content) {
+        self.init(title: title, glyph: glyph, trailing: { EmptyView() }, content: content)
     }
 }
 

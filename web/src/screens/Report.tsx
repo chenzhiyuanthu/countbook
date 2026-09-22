@@ -1,9 +1,12 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useStore } from '../app/store'
 import { Money, MoneyText } from '../ui/Money'
 import { Button, EmptyState, Label, ProgressRule, Rule } from '../ui/primitives'
 import { DeviationBars, HourScatter, RegretBlocks, YearLedger } from '../ui/charts'
+import { Glyph, type GlyphName } from '../ui/icons'
 import {
+  cashflowOfMonth,
+  cashflowOfYear,
   deviationByCategory,
   hourScatter,
   inMonth,
@@ -31,6 +34,19 @@ const MIN_DEVIATION_DAYS = 14
 const MIN_HOUR_SAMPLE = 40
 /** Ordering after this hour is the pattern the scatter exists to expose. */
 const LATE_HOUR = 22
+
+/** A section title with its mark before it, in the title's own grey. */
+function Head({ glyph, title, trailing }: { glyph: GlyphName; title: string; trailing?: ReactNode }) {
+  return (
+    <div className="section__head">
+      <span className="report__title-row">
+        <span className="report__glyph"><Glyph name={glyph} /></span>
+        <Label>{title}</Label>
+      </span>
+      {trailing ?? null}
+    </div>
+  )
+}
 
 interface CategoryRow {
   categoryId: string
@@ -72,6 +88,8 @@ export default function Report() {
   )
 
   const r = useMemo(() => regret(ledger, asOf), [ledger, asOf])
+  const flow = useMemo(() => cashflowOfMonth(ledger, month), [ledger, month])
+  const yearFlow = useMemo(() => cashflowOfYear(ledger, year), [ledger, year])
   const wish = useMemo(() => regretAsWishObject(ledger, r.year), [ledger, r.year])
 
   const categoryRows = useMemo<CategoryRow[]>(() => {
@@ -168,10 +186,64 @@ export default function Report() {
     </header>
   )
 
+  // Plain arithmetic, not a judgement, so it is not held behind the fortnight
+  // the rest of the page waits for: what came in, what went out, and the
+  // difference, in the ledger's currency. A foreign receipt was converted when
+  // it was written, so nothing here depends on today's rate.
+  const cashflow = (
+    <section className="section report__cashflow">
+      <Head glyph="cashflow" title={t('report.cashflow')} />
+      <div className="report__figures">
+        <div className="report__figure">
+          <Label>{t('report.income')}</Label>
+          <Money fen={flow.income} size="section" role="credit" currency={currency} />
+        </div>
+        <div className="report__figure">
+          <Label>{t('report.spend')}</Label>
+          <Money fen={flow.spend} size="section" role="debit" currency={currency} />
+        </div>
+        <div className="report__figure">
+          <Label>{t('report.net')}</Label>
+          <Money fen={flow.net} size="section" role={flow.net < 0 ? 'over' : 'neutral'} currency={currency} />
+        </div>
+      </div>
+      {flow.incomeByCategory.length ? (
+        <dl className="report__sources">
+          <dt className="t-label report__sourcesLabel">{t('report.incomeBy')}</dt>
+          {flow.incomeByCategory.map((row) => (
+            <div key={row.categoryId} className="report__source">
+              <dd className="t-body ink-700">{nameOf(row.categoryId)}</dd>
+              <dd className="report__num">
+                <Money fen={row.amount} size="body" role="neutral" currency={currency} />
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      <dl className="report__yearFlow" aria-label={t('report.thisYear')}>
+        <dt className="t-label ink-500">{t('report.thisYear')}</dt>
+        {(
+          [
+            ['report.income', yearFlow.income, 'neutral'],
+            ['report.spend', yearFlow.spend, 'neutral'],
+            ['report.net', yearFlow.net, yearFlow.net < 0 ? 'over' : 'neutral'],
+          ] as const
+        ).map(([key, fen, role]) => (
+          <div key={key} className="report__yearItem">
+            <dt className="t-label ink-500">{t(key)}</dt>
+            <dd><Money fen={fen} size="body" role={role} currency={currency} /></dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
+
   if (recordedDays < MIN_RECORDED_DAYS) {
     return (
       <div className="column report">
         {head}
+        <Rule strong />
+        {cashflow}
         <Rule strong />
         <EmptyState title={t('report.empty')} />
       </div>
@@ -182,8 +254,11 @@ export default function Report() {
     <div className="column report">
       {head}
       <Rule strong />
+      {cashflow}
 
+      <Rule strong />
       <section className="section report__regret">
+        <Head glyph="regret" title={t('report.regretTitle')} />
         <div className="report__figures">
           <div className="report__figure">
             <Label>{t('report.regretMonth')}</Label>
@@ -206,9 +281,7 @@ export default function Report() {
 
       <Rule strong />
       <section className="section">
-        <div className="section__head">
-          <Label>{t('report.deviation')}</Label>
-        </div>
+        <Head glyph="deviation" title={t('report.deviation')} />
         {deviations.length === 0 ? (
           <p className="report__gate t-body ink-700">{t('report.noStandard')}</p>
         ) : deviationShort > 0 ? (
@@ -220,17 +293,13 @@ export default function Report() {
 
       <Rule strong />
       <section className="section">
-        <div className="section__head">
-          <Label>{t('report.rate')}</Label>
-        </div>
+        <Head glyph="rate" title={t('report.rate')} />
         <RegretBlocks judged={r.judged} notWorth={r.notWorth} />
       </section>
 
       <Rule strong />
       <section className="section">
-        <div className="section__head">
-          <Label>{t('report.byCategory')}</Label>
-        </div>
+        <Head glyph="categories" title={t('report.byCategory')} />
         {categoryRows.length === 0 ? (
           <p className="report__gate t-body ink-500">{t('report.tableEmpty')}</p>
         ) : (
@@ -261,9 +330,7 @@ export default function Report() {
 
       <Rule strong />
       <section className="section">
-        <div className="section__head">
-          <Label>{t('report.hours')}</Label>
-        </div>
+        <Head glyph="hours" title={t('report.hours')} />
         {hourTotal < MIN_HOUR_SAMPLE ? (
           <p className="report__gate t-body ink-700">
             {t('report.hourGate', { n: MIN_HOUR_SAMPLE - hourTotal })}
@@ -280,10 +347,7 @@ export default function Report() {
 
       <Rule strong />
       <section className="section">
-        <div className="section__head">
-          <Label>{t('report.year')}</Label>
-          <span className="t-label t-mono">{year}</span>
-        </div>
+        <Head glyph="year" title={t('report.year')} trailing={<span className="t-label t-mono">{year}</span>} />
         <YearLedger months={yearMonths} />
       </section>
     </div>

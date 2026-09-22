@@ -1,0 +1,30 @@
+/* The sync mark sits in the top-right corner above the scroller on every tab,
+   in the label size, so it reads as a margin note rather than a banner. */
+.syncmark {
+  display: flex;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  padding-top: calc(env(safe-area-inset-top) + var(--s-1));
+}
+
+.syncmark__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: var(--s-7);
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--c-ink500);
+}
+
+.syncmark__btn:focus-visible {
+  outline: 1px solid var(--c-rule-strong);
+  outline-offset: 2px;
+}
+
+.syncmark--ok { color: var(--c-fig-spared); }
+.syncmark--held { color: var(--c-fig-held); }
+.syncmark--quiet { color: var(--c-ink500); }
+.syncmark--alert { color: var(--c-ink900); }

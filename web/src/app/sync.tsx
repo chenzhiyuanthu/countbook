@@ -7,7 +7,7 @@ import {
   deriveKey, formatFingerprint, fromBase64, importKeyMaterial, toBase64, type VaultKey,
 } from '../sync/crypto'
 import { GitHubStore, type GitHubConfig } from '../sync/github'
-import { syncServer, type ServerConfig, type ServerCursor } from '../sync/server'
+import { ServerError, syncServer, type ServerConfig, type ServerCursor } from '../sync/server'
 import { emptyCursor, syncVault, type Cursor, type Manifest } from '../sync/vault'
 import { KEYS, lsGet, lsRemove, lsSet } from './db'
 import { useStore } from './store'
@@ -36,12 +36,18 @@ export interface SyncApi {
   config: SyncConfig | null
   fingerprint: string | null
   message: string
+  /** The server no longer accepts our token: the fix is a password, not a retry. */
+  authExpired: boolean
+  /** Something written here has not yet been confirmed by the remote. */
+  pending: boolean
   lastSyncedAt: number | null
   connectGitHub: (cfg: GitHubConfig, passphrase: string, remember: boolean) => Promise<void>
   connectServer: (cfg: ServerConfig & { email: string }, passphrase: string, remember: boolean) => Promise<void>
   unlock: (passphrase: string) => Promise<void>
   disconnect: () => void
   syncNow: () => Promise<void>
+  /** Forget the pull cursor and read the whole log again. Cheap, and certain. */
+  resync: () => Promise<void>
 }
 
 const Ctx = createContext<SyncApi | null>(null)
@@ -56,12 +62,34 @@ const CONFIG_KEY = KEYS.sync
 const CURSOR_KEY = KEYS.cursor
 const REMEMBER_KEY = 'countbook.key'
 const LAST_KEY = 'countbook.lastSync'
+const EPOCH_KEY = 'countbook.cursorEpoch'
+
+/**
+ * Cursors written before epoch 2 may have been advanced by a push reply past
+ * rows this device never read (see sync/server.ts), so the first run on this
+ * build starts from zero once. Reading the log again is cheap; a missing row
+ * is not.
+ */
+const CURSOR_EPOCH = 2
+function migrateCursor(): void {
+  if (lsGet<number>(EPOCH_KEY, 1) >= CURSOR_EPOCH) return
+  lsRemove(CURSOR_KEY)
+  lsSet(EPOCH_KEY, CURSOR_EPOCH)
+}
 
 export function SyncProvider({ children }: { children: ReactNode }) {
   const { events, absorb, ready } = useStore()
-  const [config, setConfig] = useState<SyncConfig | null>(() => lsGet<SyncConfig | null>(CONFIG_KEY, null))
+  const [config, setConfig] = useState<SyncConfig | null>(() => {
+    migrateCursor()
+    return lsGet<SyncConfig | null>(CONFIG_KEY, null)
+  })
   const [phase, setPhase] = useState<SyncPhase>('off')
   const [message, setMessage] = useState('')
+  const [authExpired, setAuthExpired] = useState(false)
+  // The size of the log the last successful run left behind. The log is the
+  // union of what both sides held, so any later local write — or undo — moves
+  // the count off this mark, and that difference is what "pending" means.
+  const [syncedLength, setSyncedLength] = useState<number | null>(null)
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(() => lsGet<number | null>(LAST_KEY, null))
   const [key, setKey] = useState<VaultKey | null>(null)
 
@@ -126,10 +154,12 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           merged = out.merged
         }
         absorb(merged)
+        setSyncedLength(merged.length)
         const at = Date.now()
         setLastSyncedAt(at)
         lsSet(LAST_KEY, at)
         setMessage('')
+        setAuthExpired(false)
         setPhase('idle')
       } catch (err) {
         const text = err instanceof Error ? err.message : String(err)
@@ -137,6 +167,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         // colouring red.
         const offline = !navigator.onLine || /Failed to fetch|NetworkError|连接失败/i.test(text)
         setMessage(text)
+        setAuthExpired(err instanceof ServerError && err.kind === 'auth')
         setPhase(offline ? 'offline' : 'error')
       } finally {
         running.current = false
@@ -151,6 +182,12 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   const syncNow = useCallback(async () => {
     if (config && key) await run(config, key)
+  }, [config, key, run])
+
+  const resync = useCallback(async () => {
+    if (!config || !key) return
+    lsRemove(CURSOR_KEY)
+    await run(config, key)
   }, [config, key, run])
 
   /* ── triggers ─────────────────────────────────────────────────────── */
@@ -194,13 +231,12 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       passphrase: string,
       readManifest: () => Promise<Manifest | null>,
       writeManifest: (m: Manifest) => Promise<void>,
+      wrong: string,
     ): Promise<VaultKey> => {
       const existing = await readManifest()
       if (existing) {
         const vk = await deriveKey(passphrase, fromBase64(existing.kdf.salt), existing.kdf.iterations)
-        if (vk.fingerprint !== existing.fingerprint) {
-          throw new Error('口令打不开这个仓库 · That passphrase does not open this vault')
-        }
+        if (vk.fingerprint !== existing.fingerprint) throw new Error(wrong)
         return vk
       }
       const vk = await deriveKey(passphrase)
@@ -225,7 +261,12 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         const check = await store.verify()
         if (!check.ok) throw new Error(check.error)
         await store.listShards() // primes the SHA table the manifest write needs
-        const vk = await establish(passphrase, () => store.readManifest(), (m) => store.writeManifest(m))
+        const vk = await establish(
+          passphrase,
+          () => store.readManifest(),
+          (m) => store.writeManifest(m),
+          '口令打不开这个仓库 · That passphrase does not open this vault',
+        )
         const next: SyncConfig = { kind: 'github', ...cfg }
         lsSet(CONFIG_KEY, next)
         lsRemove(CURSOR_KEY)
@@ -248,10 +289,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       setMessage('')
       try {
         const { readServerManifest, writeServerManifest } = await import('../sync/server')
+        // The account accepted this password but the vault was sealed under a
+        // different one — possible only if the password changed server-side.
         const vk = await establish(
           passphrase,
           () => readServerManifest(cfg),
           (m) => writeServerManifest(cfg, m),
+          '这个密码打不开已有的数据 · This password does not open the existing data',
         )
         const next: SyncConfig = { kind: 'server', ...cfg }
         lsSet(CONFIG_KEY, next)
@@ -278,7 +322,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           : await (await import('../sync/server')).readServerManifest(config)
       if (!manifest) throw new Error('这个仓库还没有初始化')
       const vk = await deriveKey(passphrase, fromBase64(manifest.kdf.salt), manifest.kdf.iterations)
-      if (vk.fingerprint !== manifest.fingerprint) throw new Error('口令打不开这个仓库')
+      if (vk.fingerprint !== manifest.fingerprint) {
+        throw new Error(config.kind === 'server' ? '密码不对' : '口令打不开这个仓库')
+      }
       remember(vk)
       setKey(vk)
       setPhase('idle')
@@ -297,6 +343,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     setLastSyncedAt(null)
     setPhase('off')
     setMessage('')
+    setAuthExpired(false)
+    setSyncedLength(null)
   }, [])
 
   const value = useMemo<SyncApi>(
@@ -305,14 +353,20 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       config,
       fingerprint: key ? formatFingerprint(key.fingerprint) : null,
       message,
+      authExpired,
+      pending: syncedLength === null || events.length !== syncedLength,
       lastSyncedAt,
       connectGitHub,
       connectServer,
       unlock,
       disconnect,
       syncNow,
+      resync,
     }),
-    [phase, config, key, message, lastSyncedAt, connectGitHub, connectServer, unlock, disconnect, syncNow],
+    [
+      phase, config, key, message, authExpired, syncedLength, events.length, lastSyncedAt,
+      connectGitHub, connectServer, unlock, disconnect, syncNow, resync,
+    ],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

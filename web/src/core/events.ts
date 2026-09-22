@@ -1,6 +1,6 @@
 import type { Fen } from './money'
 import type { Day } from './date'
-import type { Category, Correction, Entry, Settings, Sub, SubStatus, Voidance, Wish } from './types'
+import type { Category, Correction, Entry, ForeignAmount, Settings, Sub, SubStatus, Voidance, Wish } from './types'
 import { compare as compareHlc } from './hlc'
 
 /**
@@ -25,7 +25,7 @@ export type Payload =
   | { t: 'entry.add'; entry: Entry }
   | { t: 'entry.patch'; target: string; patch: Partial<Omit<Entry, 'id'>> }
   | { t: 'entry.remove'; target: string }
-  | { t: 'entry.correct'; target: string; amount: Fen; reason: string }
+  | { t: 'entry.correct'; target: string; amount: Fen; reason: string; original?: ForeignAmount }
   | { t: 'entry.void'; target: string; reason: string }
   | { t: 'review.judge'; target: string; worthIt: boolean }
   | { t: 'review.defer'; target: string }

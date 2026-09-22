@@ -2,16 +2,17 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../app/store'
 import type { StringKey } from '../app/i18n'
 import { reckoningQueue } from '../core/compute'
+import { Glyph, type GlyphName } from './icons'
 import './TabBar.css'
 
 export type TabId = 'today' | 'ledger' | 'report' | 'wants' | 'settings'
 
-const TABS: readonly { readonly id: TabId; readonly key: StringKey }[] = [
-  { id: 'today', key: 'tab.today' },
-  { id: 'ledger', key: 'tab.ledger' },
-  { id: 'report', key: 'tab.report' },
-  { id: 'wants', key: 'tab.wants' },
-  { id: 'settings', key: 'tab.settings' },
+const TABS: readonly { readonly id: TabId; readonly key: StringKey; readonly glyph: GlyphName }[] = [
+  { id: 'today', key: 'tab.today', glyph: 'today' },
+  { id: 'ledger', key: 'tab.ledger', glyph: 'ledger' },
+  { id: 'report', key: 'tab.report', glyph: 'report' },
+  { id: 'wants', key: 'tab.wants', glyph: 'wants' },
+  { id: 'settings', key: 'tab.settings', glyph: 'settings' },
 ]
 
 interface Indicator {
@@ -71,6 +72,9 @@ export function TabBar({ current, onChange }: { current: TabId; onChange: (id: T
                 aria-current={active ? 'page' : undefined}
                 onClick={() => onChange(tab.id)}
               >
+                <span className={`tabbar__mark${heavy ? ' tabbar__mark--heavy' : ''}`}>
+                  <Glyph name={tab.glyph} size={20} />
+                </span>
                 <span className={`tabbar__label t-label${heavy ? ' tabbar__label--heavy' : ''}`}>
                   {t(tab.key)}
                 </span>

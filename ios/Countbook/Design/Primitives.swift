@@ -149,17 +149,23 @@ struct RuleView: View {
 /// air, and the structural rule that opens the section.
 struct SectionHeader<Trailing: View>: View {
     let title: String
+    var glyph: GlyphName?
     @ViewBuilder var trailing: Trailing
 
-    init(_ title: String, @ViewBuilder trailing: () -> Trailing) {
+    init(_ title: String, glyph: GlyphName? = nil, @ViewBuilder trailing: () -> Trailing) {
         self.title = title
+        self.glyph = glyph
         self.trailing = trailing()
     }
 
     var body: some View {
         VStack(spacing: Space.s3) {
             HStack(alignment: .firstTextBaseline, spacing: Space.s3) {
-                Text(title).textStyle(.label)
+                HStack(alignment: .center, spacing: Space.s2) {
+                    // A section's mark sits before its title, in the title's own grey.
+                    if let glyph { Glyph(name: glyph).foregroundStyle(Ink.ink500) }
+                    Text(title).textStyle(.label)
+                }
                 Spacer(minLength: 0)
                 trailing
             }
@@ -550,6 +556,30 @@ struct SegmentedStamp<Value: Hashable>: View {
 /// `.sheet`, add `.presentationBackground(.clear)` so this geometry is the one
 /// that shows. There is no blur anywhere — no `Material`, no `backdrop-filter` —
 /// and that is the constraint that keeps both renderers identical (§2.7).
+/// The room a sheet's content has, measured on the sheet's own root rather
+/// than on the content: the root is sized by the presentation and does not
+/// move when the content grows, so a layout that sizes itself from this can
+/// never feed back into it. Measuring the content instead (its global frame)
+/// is a loop waiting to happen — the capture sheet's keypad once did exactly
+/// that and pinned a core at 100%.
+struct SheetRoom: Equatable, Sendable {
+    /// The content width inside the sheet's gutters; 0 before the first layout.
+    var width: CGFloat = 0
+    /// The sheet's bottom edge in global coordinates; 0 before the first layout.
+    var bottom: CGFloat = 0
+}
+
+private struct SheetRoomKey: EnvironmentKey {
+    static let defaultValue = SheetRoom()
+}
+
+extension EnvironmentValues {
+    var sheetRoom: SheetRoom {
+        get { self[SheetRoomKey.self] }
+        set { self[SheetRoomKey.self] = newValue }
+    }
+}
+
 struct SheetContainer<Content: View>: View {
     var title: String? = nil
     var accessibilityLabel: String? = nil
@@ -585,6 +615,10 @@ struct SheetContainer<Content: View>: View {
                     .accessibilityHidden(true)
 
                 sheet(bottomInset: geo.safeAreaInsets.bottom)
+                    .environment(\.sheetRoom, SheetRoom(
+                        width: min(geo.size.width, SheetMetrics.maxWidth) - Layout.gutter * 2,
+                        bottom: geo.frame(in: .global).maxY
+                    ))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }

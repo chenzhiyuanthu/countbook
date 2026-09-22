@@ -87,7 +87,19 @@ final class SyncEngine {
     private(set) var phase: SyncPhase = .off
     private(set) var config: SyncConfig?
     private(set) var message = ""
+    /// The server no longer accepts our token: the fix is a password, not a retry.
+    private(set) var authExpired = false
+    /// The size of the log the last successful run left behind. The log is the
+    /// union of what both sides held, so any later local write — or undo — moves
+    /// the count off this mark, and that difference is what "pending" means.
+    private(set) var syncedCount: Int?
     private(set) var lastSyncedAt: Int?
+
+    /// Something written here has not yet been confirmed by the remote.
+    var pending: Bool {
+        guard let syncedCount else { return true }
+        return readEvents().count != syncedCount
+    }
 
     var fingerprint: String? { key.map { formatFingerprint($0.fingerprint) } }
     var describe: String? { config?.describe }
@@ -107,9 +119,18 @@ final class SyncEngine {
     private let configKey = "countbook.sync"
     private let cursorKey = "countbook.cursor"
     private let lastKey = "countbook.lastSync"
+    private let epochKey = "countbook.cursorEpoch"
+    /// Cursors written before epoch 2 may have been advanced by a push reply
+    /// past rows this device never read (see ServerStore.syncServer), so the
+    /// first run on this build starts from zero once.
+    private static let cursorEpoch = 2
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        if defaults.integer(forKey: epochKey) < Self.cursorEpoch {
+            defaults.removeObject(forKey: cursorKey)
+            defaults.set(Self.cursorEpoch, forKey: epochKey)
+        }
         config = decode(SyncConfig.self, defaults.data(forKey: configKey))
         lastSyncedAt = defaults.object(forKey: lastKey) as? Int
     }
@@ -147,6 +168,13 @@ final class SyncEngine {
     func syncNow() async {
         guard let config, let key else { return }
         await run(config, key)
+    }
+
+    /// Forget the pull cursor and read the whole log again. Cheap, and certain.
+    func resync() async {
+        guard config != nil, key != nil else { return }
+        defaults.removeObject(forKey: cursorKey)
+        await syncNow()
     }
 
     private func trigger() {
@@ -224,13 +252,16 @@ final class SyncEngine {
                 merged = out.merged
             }
             absorb(merged)
+            syncedCount = merged.count
             let at = nowMillis()
             lastSyncedAt = at
             defaults.set(at, forKey: lastKey)
             message = ""
+            authExpired = false
             phase = .idle
         } catch {
             message = error.localizedDescription
+            authExpired = (error as? ServerError)?.kind == .auth
             // A dead network is a normal state on a phone, not a failure worth
             // colouring red.
             phase = isOffline(error) ? .offline : .error
@@ -252,7 +283,8 @@ final class SyncEngine {
     private func establish(
         _ passphrase: String,
         read: () async throws -> Manifest?,
-        write: (Manifest) async throws -> Void
+        write: (Manifest) async throws -> Void,
+        wrong: String
     ) async throws -> VaultKey {
         if let existing = try await read() {
             guard let salt = fromBase64(existing.kdf.salt) else {
@@ -260,7 +292,7 @@ final class SyncEngine {
             }
             let vk = try await deriveKey(passphrase, salt: salt, iterations: existing.kdf.iterations)
             guard vk.fingerprint == existing.fingerprint else {
-                throw CryptoError("口令打不开这个仓库 · That passphrase does not open this vault", .wrongPassphrase)
+                throw CryptoError(wrong, .wrongPassphrase)
             }
             return vk
         }
@@ -287,7 +319,8 @@ final class SyncEngine {
             let vk = try await establish(
                 passphrase,
                 read: { try await store.readManifest() },
-                write: { try await store.writeManifest($0) }
+                write: { try await store.writeManifest($0) },
+                wrong: S.t(.syncWrongPassphrase)
             )
             adopt(.github(cfg), vk, remember: keep)
             await syncNow()
@@ -304,10 +337,13 @@ final class SyncEngine {
         phase = .syncing
         message = ""
         do {
+            // The account accepted this password but the vault was sealed under
+            // a different one — possible only if the password changed server-side.
             let vk = try await establish(
                 passphrase,
                 read: { try await ServerStore.readManifest(cfg) },
-                write: { try await ServerStore.writeManifest(cfg, $0) }
+                write: { try await ServerStore.writeManifest(cfg, $0) },
+                wrong: S.t(.syncWrongPassword)
             )
             adopt(.server(cfg, email: email), vk, remember: keep)
             await syncNow()
@@ -331,7 +367,8 @@ final class SyncEngine {
         }
         let vk = try await deriveKey(passphrase, salt: salt, iterations: manifest.kdf.iterations)
         guard vk.fingerprint == manifest.fingerprint else {
-            throw CryptoError("口令打不开这个仓库", .wrongPassphrase)
+            if case .server = config { throw CryptoError(S.t(.syncWrongPassword), .wrongPassphrase) }
+            throw CryptoError(S.t(.syncWrongPassphrase), .wrongPassphrase)
         }
         remember(vk)
         key = vk
@@ -349,6 +386,8 @@ final class SyncEngine {
         lastSyncedAt = nil
         phase = .off
         message = ""
+        authExpired = false
+        syncedCount = nil
     }
 
     private func adopt(_ next: SyncConfig, _ vk: VaultKey, remember keep: Bool) {

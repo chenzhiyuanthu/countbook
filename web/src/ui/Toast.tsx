@@ -3,8 +3,8 @@ import { useStore } from '../app/store'
 import { Icon } from './icons'
 import './Toast.css'
 
-/** Long enough to read one line and reach for 撤销, short enough to leave. */
-const DWELL_MS = 5000
+/** Long enough to read one line and reach for 撤销, short enough to leave (DESIGN.md §5.12). */
+const DWELL_MS = 4000
 /** A downward drag past this many pixels is a dismissal, not a fidget. */
 const SWIPE_PX = 24
 
@@ -15,13 +15,13 @@ export function Toast() {
   const id = toastState?.id
   const action = toastState?.action
 
-  // A toast that carries an action waits for its answer; a toast that only
-  // reports something leaves on its own.
+  // Four seconds whether or not it carries 撤销: what it offers is always
+  // still reachable from the ledger's own history.
   useEffect(() => {
-    if (id === undefined || action !== undefined) return
+    if (id === undefined) return
     const timer = window.setTimeout(dismissToast, DWELL_MS)
     return () => window.clearTimeout(timer)
-  }, [id, action, dismissToast])
+  }, [id, dismissToast])
 
   useEffect(() => setDrag(0), [id])
 

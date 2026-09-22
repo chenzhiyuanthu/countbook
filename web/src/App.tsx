@@ -1,9 +1,11 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { StoreProvider, useStore } from './app/store'
 import { SyncProvider } from './app/sync'
 import { TabBar, type TabId } from './ui/TabBar'
 import { Toast } from './ui/Toast'
 import { CaptureButton } from './ui/CaptureButton'
+import { SyncMark } from './ui/SyncMark'
+import { PullToSync } from './ui/PullToSync'
 import Today from './screens/Today'
 import './styles/base.css'
 import './App.css'
@@ -27,6 +29,7 @@ function Shell() {
   const [tab, setTab] = useState<TabId>('today')
   const [capturing, setCapturing] = useState(false)
   const [reckoning, setReckoning] = useState(false)
+  const scroller = useRef<HTMLElement | null>(null)
 
   // The reckoning is offered, never forced: it appears on its day and can be
   // dismissed, because a modal that blocks the ledger would make people stop
@@ -51,8 +54,10 @@ function Shell() {
   const capturable = CAPTURE_TABS.includes(tab)
 
   return (
-    <div className="app">
-      <main className={`scroll${capturable ? ' scroll--capture' : ''}`} id="main">
+    <div className={`app${capturable ? ' app--capture' : ''}`}>
+      <SyncMark onOpen={() => setTab('settings')} />
+      <main className={`scroll${capturable ? ' scroll--capture' : ''}`} id="main" ref={scroller}>
+        <PullToSync scroller={scroller} />
         <Suspense fallback={<div className="screen-fallback" />}>
           {tab === 'today' && <Today onCapture={() => setCapturing(true)} onReckon={() => setReckoning(true)} />}
           {tab === 'ledger' && <Ledger />}

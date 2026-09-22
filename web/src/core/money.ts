@@ -91,3 +91,39 @@ export function divideRemainderLast(total: Fen, n: number): { per: Fen; last: Fe
 }
 
 export const sum = (xs: readonly Fen[]): Fen => xs.reduce((a, b) => a + b, 0)
+
+/* ── foreign currency ────────────────────────────────────────────────── */
+
+/** A rate is carried as millionths: 7.1234 → 7_123_400. */
+export const RATE_SCALE = 1_000_000
+
+/**
+ * Convert minor units of one currency into minor units of another at a rate
+ * in millionths, rounding half away from zero. The product can pass 2^53
+ * (¥999,999.99 at a four-figure rate), so it is taken in BigInt; the Swift
+ * mirror does the same in Int64 and lands on the same 分 for the same inputs
+ * (design/fixtures/fx.json).
+ */
+export function convert(amountMinor: Fen, rateMicro: number): Fen {
+  const q = BigInt(Math.trunc(amountMinor)) * BigInt(Math.trunc(rateMicro))
+  const scale = BigInt(RATE_SCALE)
+  const half = scale / 2n
+  return Number(q >= 0n ? (q + half) / scale : -((-q + half) / scale))
+}
+
+/** '7.1234' — four decimals, trailing zeros trimmed down to two. */
+export function formatRate(rateMicro: number): string {
+  const int = Math.floor(rateMicro / RATE_SCALE)
+  let frac = String(rateMicro % RATE_SCALE).padStart(6, '0').slice(0, 4)
+  while (frac.length > 2 && frac.endsWith('0')) frac = frac.slice(0, -1)
+  return `${int}.${frac}`
+}
+
+/** Parse a typed rate ('7.12', '0.0431') into millionths; null if it is not one. */
+export function parseRate(input: string): number | null {
+  const s = input.trim()
+  if (!/^\d+(\.\d{0,6})?$/.test(s) || s === '') return null
+  const [intPart = '0', fracPart = ''] = s.split('.')
+  const micro = Number(intPart) * RATE_SCALE + Number((fracPart + '000000').slice(0, 6))
+  return micro > 0 ? micro : null
+}
