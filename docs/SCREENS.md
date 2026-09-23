@@ -29,7 +29,7 @@
 | 字号 | `--t-fig-hero` `--t-fig-screen` `--t-fig-section` `--t-fig-row` `--t-fig-inline` `--t-body` `--t-body-sm` `--t-label` `--t-micro` `--t-mono-row` `--t-mono-micro` `--t-stamp` |
 | 间距与布局 | `--s-1`…`--s-10` `--gutter` `--content-max`(720) `--gutter-amount`(96) `--row-pad-y`(14) `--row-min-h`(44) `--tabbar-h`(49) `--header-h`(52) `--breakout`(20) |
 | 圆角 | `--r-none` `--r-field` `--r-card` `--r-sheet` `--r-pill` |
-| 动效 | `figureSettle` `sheetPresent` `sheetDismiss` `scrimFade` `stampSlide` `rowPrint` `verdictSwipe` `holdRing` `coolArc` `chartReveal` `toastIn/Out` |
+| 动效 | `figureSettle` `sheetPresent` `sheetDismiss` `scrimFade` `stampSlide` `rowPrint` `verdictSwipe` `coolArc` `chartReveal` `toastIn/Out` |
 
 ---
 
@@ -99,7 +99,7 @@ regretYear_fen     = Σ amount where worthIt == false and year(entry) == y   // 
 | 面板（记一笔、加入待购） | `sheetPresent` 280ms + `scrimFade` 200ms；退出 `sheetDismiss` 200ms。 |
 | 全屏模态（周日审判、初次设置） | translateY 24 → 0 + 淡入 280ms；退出 200ms。 |
 | 保存一笔 | 签名时刻，见 §4.7（`DESIGN.md` §6.5 为规范来源）。 |
-| 减少动效 | 全部塌缩为 100ms opacity；`holdRing` 的 3,000ms 不变（延迟是机制，动画只是它的外观）。 |
+| 减少动效 | 全部塌缩为 100ms opacity；冷静弧照常每分钟更新（延迟是机制，动画只是它的外观）。 |
 
 ---
 
@@ -249,7 +249,7 @@ regretYear_fen     = Σ amount where worthIt == false and year(entry) == y   // 
 切换保留已键入的金额（数字通常是对的），清掉类目、印章与盈亏。
 
 **投资态**：类目换成投资类目（股票 / 基金 / 理财 / 其他；早先的工资等收入类目归档，只为老记录保留名字）；
-**没有印章行、没有冷静期、没有 3 秒环**——一个结果没有什么可判的；印章行的位置换成
+**没有印章行、没有冷静期**——一个结果没有什么可判的；印章行的位置换成
 `盈利 | 亏损`（`capture.gain` / `capture.loss`），亏损存为负数——账本里唯一带符号的金额，因为亏损是
 结果而不是购买。「记入后 今日可用」一行换成 `capture.incomeNote` 投资不计入今日可用。存入后账页里以
 credit 角色印出（亏损带 U+2212 负号），报告 §7 的「收支」把它算进去。修改与更正面板同样以盈亏开关 +
@@ -282,14 +282,14 @@ credit 角色印出（亏损带 U+2212 负号），报告 §7 的「收支」把
 
 冷静路径是**默认**，不是一个没人点的选项。逃生口必须存在，但必须次一级。
 
-### 4.3 线框 · 印章「冲动」且金额 ≥ 冷静期起点 → 理由 + 3 秒环 + 变体标签
+### 4.3 线框 · 印章「冲动」且金额 ≥ 冷静期起点 → 理由 + 变体标签
 
 ```
 │  这笔钱能换来什么？                        4/20    │ ← 必填 2–20 字
 │  ________________________________________________
 │  ────────────────────────────────────────────────
-│  [   存入账页 · 这类你 62% 判过不值      ( ◜ )  ]  │ ← 同一条按钮：文字换了，颜色没换
-└───────────────────────────────────────── 3s 线性 ─┘
+│  [      存入账页 · 这类你 62% 判过不值          ]  │ ← 同一条按钮：文字换了，颜色没换
+└──────────────────────────────────────────────────┘
 ```
 
 ### 4.4 线框 · Web ≥720px
@@ -310,9 +310,9 @@ credit 角色印出（亏损带 U+2212 负号），报告 §7 的「收支」把
 | C8 | 键盘 | `1–9 · . · 0 · ⌫` | 见 `DESIGN.md` §5.8 | `.` 为分隔符键，已有小数点后禁用；长按 `⌫` 400ms 清空全额。iOS 每次按键一次 `.light` 触感（全应用仅此处）。 |
 | C9 | 提交条 | `capture.submit` 存入账页 | 主按钮条，高 52，`--ink-900`／禁用 `--surface-sunken` + `--ink-300` | 未选印章 → 禁用（不抖动、不报错）。 |
 | C9a | 变体：基率标签 | `capture.submit.regret` 存入账页 · 这类你 {p}% 判过不值 | 同条同色；`·` 后从句 400 字重 | 触发：该类目已判 ≥30 笔 **且** 后悔率 >40% **且** 本笔 > 该类目中位数。零新组件、零新颜色、非阻塞——把产品最好的数据放在最要紧的那一秒。样本不足则标签不变。 |
-| C9b | 变体：3 秒环 | 环在条内右侧，直径 24，1px | `--paper` 0.4 底环 + `--paper` 实弧，**严格线性** | 触发：金额 ≥ 冷静期起点，**或** 今日可用已为负。松手即刻归零、不保存、无惩罚。减少动效时改为 `3 · 2 · 1` mono 倒数，**时长不变**。 |
+| C9b | ~~变体：3 秒环~~ | 已撤销（2026-09-23，`PRODUCT.md` F-7） | — | 任何提交都是一次点按，不再有按住的环。 |
 | C10 | 挂起条 | `capture.hold.primary` 挂起 {n} 天 · 到 {date} | 持有条：`--surface` + 1px `--fig-held` 边 + `--fig-held` 600 标签 | 印章=想要且金额≥起点时，**主按钮本身变成它**（不是弹窗、不是选项）。点按写入待购项，不写账目。 |
-| C10b | 立即记入 | `capture.hold.override` 仍要立即记入 | 文字链接 `--t-body-sm` `--ink-700` | 跳过挂起，回到 C9（此时通常同时触发 C9b 的 3 秒环）。 |
+| C10b | 立即记入 | `capture.hold.override` 仍要立即记入 | 文字链接 `--t-body-sm` `--ink-700` | 跳过挂起，回到 C9。 |
 
 ### 4.6 状态
 
@@ -1224,7 +1224,6 @@ credit 角色印出（亏损带 U+2212 负号），报告 §7 的「收支」把
 | `capture.counter40` | {n}/40 | {n}/40 |
 | `capture.submit` | 存入账页 | Record |
 | `capture.submit.regret` | 存入账页 · 这类你 {p}% 判过不值 | Record · you judged {p}% of these not worth it |
-| `capture.submit.hold` | 按住 3 秒存入 | Hold 3s to record |
 | `capture.hold.primary` | 挂起 {n} 天 · 到 {date} | Hold {n} days · until {date} |
 | `capture.hold.override` | 仍要立即记入 | Record it now anyway |
 | `capture.fromwant` | 来自待购 · 已冷静 {n} 天 | From your want list · cooled {n} days |

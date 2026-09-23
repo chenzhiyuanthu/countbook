@@ -48,8 +48,6 @@ enum StringKey: String, CaseIterable, Sendable {
     case captureResult = "capture.result"
     case captureSave = "capture.save"
     case captureSaveWarned = "capture.saveWarned"
-    case captureHold = "capture.hold"
-    case captureHoldHint = "capture.holdHint"
     case captureSuspend = "capture.suspend"
     case captureSuspendHint = "capture.suspendHint"
     case captureIntent = "capture.intent"
@@ -490,8 +488,6 @@ enum S {
         case .captureResult: return ("结果", "Outcome")
         case .captureSave: return ("存入账页", "Enter")
         case .captureSaveWarned: return ("存入账页 · {warning}", "Enter · {warning}")
-        case .captureHold: return ("按住存入", "Hold to enter")
-        case .captureHoldHint: return ("这笔不小，按住三秒", "Not a small one — hold for three seconds")
         case .captureSuspend: return ("挂起 {days} 天", "Hold {days} days")
         case .captureSuspendHint: return ("放进待购，冷静 {days} 天再决定", "To the want list; decide in {days} days")
         case .captureIntent: return ("这笔是", "This was")

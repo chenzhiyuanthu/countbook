@@ -71,8 +71,6 @@
   width: 100%;
   min-height: calc(var(--s-8) + var(--s-3));
 }
-/* Room at the right end for the hold ring, which is centred --s-4 from the edge. */
-.pr-btn--hold { padding-right: calc(var(--s-4) * 2 + var(--s-6)); }
 
 .pr-btn--primary {
   background: var(--c-ink900);
@@ -103,37 +101,6 @@
 }
 .pr-btn--primary:disabled { background: var(--c-surface-sunken); }
 .pr-btn--danger:disabled { border-color: var(--c-rule); }
-
-.pr-btn__ring {
-  position: absolute;
-  right: var(--s-4);
-  top: 50%;
-  width: var(--s-6);
-  height: var(--s-6);
-  margin-top: calc(var(--s-6) / -2);
-}
-.pr-btn__ring circle {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1;
-  stroke-linecap: butt;
-}
-.pr-btn__ring-track { opacity: 0.4; }
-/* The arc starts at twelve o'clock and fills clockwise, strictly linearly:
-   an eased timer lies about how much time is left. */
-.pr-btn__ring-arc {
-  transform: rotate(-90deg);
-  transform-origin: 50% 50%;
-}
-
-.pr-btn__count {
-  position: absolute;
-  right: var(--s-4);
-  top: 50%;
-  transform: translateY(-50%);
-  font-family: var(--f-mono);
-  font-size: var(--t-label-size);
-}
 
 /* ── segmented ──────────────────────────────────────────────────────── */
 

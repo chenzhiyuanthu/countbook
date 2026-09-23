@@ -53,8 +53,6 @@ export const STRINGS = {
   'capture.result': ['结果', 'Outcome'],
   'capture.save': ['存入账页', 'Enter'],
   'capture.saveWarned': ['存入账页 · {warning}', 'Enter · {warning}'],
-  'capture.hold': ['按住存入', 'Hold to enter'],
-  'capture.holdHint': ['这笔不小，按住三秒', 'Not a small one — hold for three seconds'],
   'capture.suspend': ['挂起 {days} 天', 'Hold {days} days'],
   'capture.suspendHint': ['放进待购，冷静 {days} 天再决定', 'To the want list; decide in {days} days'],
   'capture.intent': ['这笔是', 'This was'],

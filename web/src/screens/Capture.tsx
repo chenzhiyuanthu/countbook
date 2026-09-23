@@ -15,11 +15,9 @@ import { CURRENCIES, fetchRate, rememberRate, type Rate } from '../sync/fx'
 import './Capture.css'
 
 /**
- * Two durations the token file does not emit, because neither is a depiction:
- * the three-second commit is the friction itself (DESIGN.md §5.6) and the
+ * A duration the token file does not emit, because it is not a depiction: the
  * long-press is the threshold at which a press stops being a tap.
  */
-const HOLD_MS = 3000
 const LONG_PRESS_MS = 400
 
 /** ¥999,999.99 — six 元 digits is the ceiling, and it is reached silently. */
@@ -110,15 +108,12 @@ export default function Capture({ onClose }: { onClose(): void }) {
   const perDay = useMemo(() => available(ledger, today, now).perDay, [ledger, today, now])
   const after = perDay - amountFen
 
-  // Income carries no stamp, no cooling and no hold: there is nothing to judge
-  // about money arriving, and nothing to be slowed down about.
+  // Income carries no stamp and no cooling: there is nothing to judge about
+  // money arriving, and nothing to be slowed down about.
   const overFloor = !income && amountFen >= coolingFloor
   const cooling = overFloor ? coolingDays(amountFen) : 0
   const suspendable = overFloor && (intent === 'want' || intent === 'impulse') && !override
   const warning = !income && categoryId ? commitWarning(ledger, today, categoryId, amountFen) : null
-  // The hold is required by the amount or by an allowance that is already
-  // spent, whichever is true first (SCREENS.md C9b).
-  const needsHold = !income && (overFloor || perDay < 0)
   const needsRate = foreign && !rateMicro
   const missing = keyedFen === 0 || needsRate || !categoryId || (!income && !intent)
 
@@ -593,16 +588,15 @@ export default function Capture({ onClose }: { onClose(): void }) {
             </>
           ) : (
             <div
-              onPointerDown={needsHold ? undefined : () => startLongPress(() => save(true))}
-              onPointerUp={needsHold ? undefined : endLongPress}
-              onPointerLeave={needsHold ? undefined : endLongPress}
-              onPointerCancel={needsHold ? undefined : endLongPress}
+              onPointerDown={() => startLongPress(() => save(true))}
+              onPointerUp={endLongPress}
+              onPointerLeave={endLongPress}
+              onPointerCancel={endLongPress}
             >
               <Button
                 variant="primary"
                 fullWidth
                 disabled={missing}
-                holdMs={needsHold ? HOLD_MS : undefined}
                 onClick={() => {
                   if (heldRef.current) {
                     heldRef.current = false

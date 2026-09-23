@@ -54,7 +54,7 @@ The generator emits a header banner `// GENERATED FROM tokens/*.json — DO NOT 
 1. **The app reports; it never editorialises.** Every string is a clerk's string — a figure, a date, a count, a derivation. No praise, no warning, no exclamation mark, no "great job", no "careful!"; if a number is bad, the number is allowed to be bad and is not accompanied by commentary.
 2. **Colour is a scarce resource with exactly three meanings, and one of them is withheld.** Red oxide means *live and actionable*, brass means *held*, pine means *money not spent* — and 后悔 is deliberately given no colour at all, because a figure that never earns ink is more damning than one that shouts.
 3. **Depth is value and rule weight, never blur.** One shadow exists in the entire system and it belongs to the capture sheet; everything else is separated by a one-device-pixel hairline and a change of surface value, because that is the only depth model that survives translation between CSS and SwiftUI unchanged.
-4. **Friction is placed before money moves, never after.** The want list's cooling period and the three-second hold on a commit that is already over standard are the only delays the product is permitted to introduce; the logging path itself must stay under six seconds or every downstream mechanic starves.
+4. **Friction is placed before money moves, never after.** The want list's cooling period is the only delay the product is permitted to introduce; the logging path itself must stay under six seconds or every downstream mechanic starves.
 5. **A figure is typography before it is data.** Tabular lining figures, a fixed 96 amount gutter, U+2212 for negatives, and the three-part ¥/元/分 composition are not decoration — they are what makes a column of money readable as a column, and they are non-negotiable on both platforms.
 6. **The record defends itself against its owner.** Closed months append 更正 and 冲销 rather than mutating; standard revisions are dated and permanent; a zero-spend day counts only when explicitly claimed — the interface exists to make retroactive self-flattery visible, not impossible.
 7. **Restraint is the argument, so any ornament is a bug.** No gradient, no glass, no glow, no emoji, no illustration, no rounded bar cap, no icon where a word will do, no spinner, no confetti, no congratulation — if an element cannot justify itself as information, it is deleted rather than toned down.
@@ -121,7 +121,7 @@ Elevation is expressed **only** by these three values plus hairlines. There is n
 | `--rule` | `#E2DFD8` | `#2B2A27` | 1.33 : 1 / 1.21 : 1 | Default hairline. Row separators, card borders at rest, chart baselines, field underlines. Decorative separation only — it MUST NOT be the sole carrier of any state or boundary that the user must perceive to operate the app. |
 | `--rule-strong` | `#C9C5BB` | `#3D3B36` | 1.72 : 1 / 1.56 : 1 | Structural rules: section dividers, the rule under a screen header, the day-section rule in the ledger, the standard line in the month strip. Still decorative. |
 | `--rule-active` | `#6E6C64` | `#8C897F` | 5.26 : 1 / 4.98 : 1 | **State-bearing** rules only: focused card border, selected category box, the field a cursor is in. Meets 1.4.11 non-text contrast (≥3:1) so state is perceivable. |
-| `--rule-stamp` | `#111110` | `#F2F0EA` | 18.89 : 1 / 15.29 : 1 | The 2px sliding selection rule under the chosen 记账印章 segment, the active tab rule, and the 存入账页 hold ring. Always `ink-900`. |
+| `--rule-stamp` | `#111110` | `#F2F0EA` | 18.89 : 1 / 15.29 : 1 | The 2px sliding selection rule under the chosen 记账印章 segment and the active tab rule. Always `ink-900`. |
 
 `--rule` and `--rule-strong` sit far below 3:1 and this is **intentional and permitted**, because they never carry information alone: every row they separate also has vertical spacing and a distinct baseline grid, and every card they bound also has a surface-value change. The moment a rule carries state, it becomes `--rule-active`. This distinction is the fix for the known dark-mode contrast risk; it MUST be respected.
 
@@ -570,7 +570,7 @@ struct Hairline: View {
 ```
 `UIScreen.main.scale` MUST NOT be used (it is wrong on external displays and deprecated in a multi-scene app). Vertical hairlines use `.frame(width: 1 / scale)`.
 
-**Rule weights.** Only three exist: `1/scale` (hairline), `1` (chart strokes, the cooling arc, the hold ring, the wish progress rule), `2` (the 印章 selection rule, the active tab rule, the error left-rule). No other stroke width may appear.
+**Rule weights.** Only three exist: `1/scale` (hairline), `1` (chart strokes, the cooling arc, the wish progress rule), `2` (the 印章 selection rule, the active tab rule, the error left-rule). No other stroke width may appear.
 
 ### 4.4 Chart stroke crispness
 
@@ -745,13 +745,7 @@ Four variants. There are no others. All are full-width bars or plain text; there
 
 Same bar, same colour, same height; the label is `--t-body` with the clause after the `·` at weight 400 rather than 600. No dialog, no colour, no delay. If the sample gate (§7.8) is unmet, the label does not change.
 
-**The 3-second hold ring.** When (a) the amount is ≥ the cooling threshold, or (b) 今日可用 is already negative, the primary bar requires a 3,000ms press-and-hold.
-
-- Ring: an **unfilled 1px circle, diameter 24**, centred 16 from the bar's right edge, stroke `--paper` at 0.4 opacity over the `--ink-900` ground.
-- Fill: a second 1px arc in `--paper`, starting at −90°, sweeping clockwise, **strictly linear, no easing**, completing at exactly 3,000ms. An eased timer lies about time.
-- Release before completion: the arc drops to 0 instantly (no rewind animation) and nothing is saved.
-- Reduced motion: the ring is replaced by a mono countdown `3 · 2 · 1` in `--t-mono-row`; the 3,000ms duration is **unchanged**, because the delay is the mechanic and only its depiction is animation.
-- Web: `pointerdown` → `requestAnimationFrame` loop writing `stroke-dashoffset`; `pointercancel`/`pointerup` aborts. iOS: `LongPressGesture(minimumDuration: 3)` with a parallel `TimelineView(.animation)` driving the arc.
+**No hold on the commit.** The primary bar is always a single tap. A 3-second press-and-hold ring (above the cooling threshold, or once 今日可用 was negative) was removed on 2026-09-23 (PRODUCT.md F-7): a record is written after the money has already gone, so a delay at that point slows the log without stopping the spend, and a ledger that is tedious to keep is a ledger with gaps in it.
 
 ### 5.7 Chip / segmented control — 记账印章
 
@@ -799,7 +793,7 @@ The mandatory intent stamp. Three segments: **必要 · 想要 · 冲动**.
 
 **冷静期弧 (cooling arc).** The only continuous animation in the product.
 - Diameter **18** in a row's stamp slot; **32** on the 待购 row; 1px stroke, **butt cap**, `--fig-held`.
-- Track: a 1px `--rule` ring beneath the arc. **Amended 2026-09-09**, against the original "no track": at a glance a 14-day arc down to its last few hours is two or three pixels of brass floating beside the row, and it reads as a rendering fault at exactly the moment the item most needs attention. The track costs one hairline and makes the remaining sweep legible as a fraction. (The 3-second hold ring keeps its own track, the same colour at 0.4 opacity on a dark ground.)
+- Track: a 1px `--rule` ring beneath the arc. **Amended 2026-09-09**, against the original "no track": at a glance a 14-day arc down to its last few hours is two or three pixels of brass floating beside the row, and it reads as a rendering fault at exactly the moment the item most needs attention. The track costs one hairline and makes the remaining sweep legible as a fraction.
 - Start at −90° (12 o'clock), depleting **counter-clockwise**. Remaining sweep = `360 × remaining / total`.
 - **Repaint cadence: once per minute.** Not per frame. Web uses a single `setInterval(60_000)` shared by all visible arcs, aligned to the wall-clock minute; iOS uses `TimelineView(.periodic(from: .now, by: 60))`. Under `prefers-reduced-motion` the arc still updates (it is information, not motion) but the value transition is instant.
 - Accompanied always by a mono countdown `还有 6 天 04:12` in `--t-mono-row` `--fig-held`.
@@ -858,7 +852,7 @@ Used for exactly one thing: **undo after a delete**, plus the save-and-stay conf
 | Token | CSS | SwiftUI | Use |
 | --- | --- | --- | --- |
 | `--ease` | `cubic-bezier(0.32, 0.08, 0.24, 1)` | `.timingCurve(0.32, 0.08, 0.24, 1, duration: d)` | **Everything** that is not a timer or a scrim. |
-| `--ease-linear` | `linear` | `.linear(duration: d)` | The 3-second hold ring, the cooling arc, the scrim fade. Timers and veils must not be eased. |
+| `--ease-linear` | `linear` | `.linear(duration: d)` | The cooling arc, the scrim fade. Timers and veils must not be eased. |
 
 **No springs. No bounce. No overshoot.** `.spring`, `.interactiveSpring`, `.bouncy`, `.snappy`, and CSS `linear()` spring approximations MUST NOT appear in the codebase. A lint rule and a Swift grep in CI enforce this.
 
@@ -874,7 +868,6 @@ Used for exactly one thing: **undo after a delete**, plus the save-and-stay conf
 | `--d-verdict` | 260 | Verdict card translate-out. |
 | `--d-sheet` | 280 | Sheet present. |
 | `--d-scrim` | 200 | Scrim fade in; also sheet dismiss. |
-| `--d-hold` | 3000 | The commit hold ring. Not a visual duration — a mechanic. |
 | `--d-toast` | 4000 | Toast dwell. |
 | `--d-arc` | 60000 | Cooling arc repaint interval. |
 
@@ -889,7 +882,6 @@ Used for exactly one thing: **undo after a delete**, plus the save-and-stay conf
 | `stampSlide` | The 2px selection rule, in the stamp row and the tab bar | translateX + width interpolation | `--ease` / `--d-base` |
 | `rowPrint` | A newly saved ledger row | (1) the row's bottom hairline `scaleX 0 → 1`, `transform-origin: left`, 0 → 240ms; (2) row content opacity 0 → 1, **starting at 160ms**, over 120ms | `--ease` / `--d-print` + `--d-quick` |
 | `verdictSwipe` | 周日审判 card | translateX ±120 and opacity 1 → 0; 值 goes left, 不值 goes right | `--ease` / `--d-verdict` |
-| `holdRing` | The 3s commit ring | `stroke-dashoffset` full → 0 | `--ease-linear` / `--d-hold` |
 | `coolArc` | Cooling arc | value step, no tween | none / repaint every `--d-arc` |
 | `chartReveal` | Any chart entering the viewport or changing dataset | opacity 0 → 1 only. **Never grow-from-baseline, never draw-on, never stagger.** | `--ease` / `--d-quick` |
 | `rowPress` | Ledger row / keypad key | ground colour change | `--ease-linear` / `--d-instant` |
@@ -935,7 +927,6 @@ Saving an entry. Timings are from the moment the commit resolves (t = 0).
 
 `@media (prefers-reduced-motion: reduce)` / `UIAccessibility.isReduceMotionEnabled` collapses **every** transition above to a single `opacity` change over 100ms, with these exceptions:
 
-- `holdRing` keeps its full 3,000ms duration and is rendered as a mono countdown (§5.6).
 - `coolArc` keeps updating; only tweening (which it never had) is removed.
 - Sheet presentation loses its translate but keeps the 100ms fade; scrim still appears.
 - `rowPrint` becomes: the completed row fades in over 100ms, hairline already drawn.
@@ -1235,7 +1226,6 @@ See §2.9 for the full table. Enforced by a build-time script `scripts/check-con
 
 ### 9.7 Motion-sensitive and timing-sensitive mechanics
 
-- The **3-second hold** is a timed interaction. WCAG 2.2.1 requires that timing be adjustable or essential. It is declared **essential** (the delay is the mechanic) and is documented in 设置 with an explicit off switch: `提交前的 3 秒等待` — turning it off is a `StandardRevision`-logged change, so the record shows the user disabled it and when.
 - The **cooling period** is not an interaction timeout; nothing is lost by waiting. No accommodation is required, and the 仍要立即记入 escape is always present.
 - The **toast** dwells 4,000ms, above the 20,000ms threshold exemption; it is also non-essential (delete is always undoable from the ledger's 冲销 history), and it is re-shown on focus for keyboard users.
 

@@ -27,8 +27,8 @@ function subscribeMotion(onChange: () => void): () => void {
   return () => m.removeEventListener('change', onChange)
 }
 
-/** Reduced motion removes depictions, never mechanics: a hold still takes as
-    long, a cooling arc still updates. Only the tween goes. */
+/** Reduced motion removes depictions, never mechanics: a cooling arc still
+    updates. Only the tween goes. */
 function useReducedMotion(): boolean {
   return useSyncExternalStore(
     subscribeMotion,
@@ -109,128 +109,26 @@ export function Label({ children }: { children: ReactNode }) {
 
 // ── Button ────────────────────────────────────────────────────────────
 
-const RING_R = 11.5
-const RING_C = 2 * Math.PI * RING_R
-
 export function Button({
-  children, onClick, variant = 'quiet', fullWidth, disabled, holdMs, ariaLabel, className,
+  children, onClick, variant = 'quiet', fullWidth, disabled, ariaLabel, className,
 }: {
   children: ReactNode
   onClick: () => void
   variant?: 'primary' | 'quiet' | 'danger'
   fullWidth?: boolean
   disabled?: boolean
-  holdMs?: number
   ariaLabel?: string
   className?: string
 }) {
-  const reduced = useReducedMotion()
-  const [holding, setHolding] = useState(false)
-  const arcRef = useRef<SVGCircleElement | null>(null)
-  const countRef = useRef<HTMLSpanElement | null>(null)
-  const frameRef = useRef(0)
-  const firedRef = useRef(false)
-  const onClickRef = useRef(onClick)
-  onClickRef.current = onClick
-
-  const paint = useCallback((progress: number) => {
-    const arc = arcRef.current
-    if (arc) arc.style.strokeDashoffset = String(RING_C * (1 - progress))
-    const count = countRef.current
-    if (count && holdMs) {
-      const left = Math.max(1, Math.ceil((holdMs * (1 - progress)) / 1000))
-      const text = String(left)
-      if (count.textContent !== text) count.textContent = text
-    }
-  }, [holdMs])
-
-  const cancel = useCallback(() => {
-    if (frameRef.current) cancelAnimationFrame(frameRef.current)
-    frameRef.current = 0
-    setHolding(false)
-    paint(0)
-  }, [paint])
-
-  const start = useCallback(() => {
-    if (disabled || !holdMs || frameRef.current) return
-    firedRef.current = false
-    setHolding(true)
-    const began = performance.now()
-    const step = () => {
-      const progress = clamp01((performance.now() - began) / holdMs)
-      paint(progress)
-      if (progress < 1) {
-        frameRef.current = requestAnimationFrame(step)
-        return
-      }
-      frameRef.current = 0
-      setHolding(false)
-      if (!firedRef.current) {
-        firedRef.current = true
-        onClickRef.current()
-      }
-    }
-    frameRef.current = requestAnimationFrame(step)
-  }, [disabled, holdMs, paint])
-
-  // A pointer released or a key pressed outside the button must still abort:
-  // a hold that survives the release would commit money on its own.
-  useEffect(() => {
-    if (!holding) return
-    const stop = () => cancel()
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') cancel() }
-    window.addEventListener('pointerup', stop)
-    window.addEventListener('pointercancel', stop)
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('pointerup', stop)
-      window.removeEventListener('pointercancel', stop)
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [holding, cancel])
-
-  useEffect(() => () => { if (frameRef.current) cancelAnimationFrame(frameRef.current) }, [])
-
-  const held = holdMs !== undefined && holdMs > 0
   return (
     <button
       type="button"
-      className={cx(
-        'pr-btn', `pr-btn--${variant}`, fullWidth && 'pr-btn--full', held && 'pr-btn--hold', className,
-      )}
+      className={cx('pr-btn', `pr-btn--${variant}`, fullWidth && 'pr-btn--full', className)}
       disabled={disabled}
       aria-label={ariaLabel}
-      onClick={held ? undefined : onClick}
-      onPointerDown={held ? (e) => { if (e.button === 0) start() } : undefined}
-      onPointerUp={held ? cancel : undefined}
-      onPointerLeave={held ? cancel : undefined}
-      onBlur={held ? cancel : undefined}
-      onKeyDown={held ? (e) => {
-        if (e.key === 'Escape') { cancel(); return }
-        if (e.key !== ' ' && e.key !== 'Enter') return
-        e.preventDefault()
-        if (!e.repeat) start()
-      } : undefined}
-      onKeyUp={held ? (e) => { if (e.key === ' ' || e.key === 'Enter') cancel() } : undefined}
+      onClick={onClick}
     >
       <span>{children}</span>
-      {held && holding && reduced ? (
-        <span className="pr-btn__count" ref={countRef} aria-hidden="true" />
-      ) : null}
-      {held && !reduced ? (
-        <svg className="pr-btn__ring" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <circle className="pr-btn__ring-track" cx="12" cy="12" r={RING_R} />
-          <circle
-            className="pr-btn__ring-arc"
-            cx="12"
-            cy="12"
-            r={RING_R}
-            ref={arcRef}
-            strokeDasharray={RING_C}
-            strokeDashoffset={RING_C}
-          />
-        </svg>
-      ) : null}
     </button>
   )
 }

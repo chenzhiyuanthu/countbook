@@ -162,5 +162,4 @@ enum Rules {
     static let reckoningMaxCards = 12
     static let deferralLimit = 3
     static let minJudgedForRegretRate = 30
-    static let holdToSaveMs = 3000
 }

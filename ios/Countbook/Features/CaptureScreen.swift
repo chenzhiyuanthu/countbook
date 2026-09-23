@@ -703,27 +703,21 @@ struct CaptureScreen: View {
     private var primaryBar: some View {
         PrimaryButton(
             warning.map { S.t(.captureSaveWarned, ["warning": $0]) } ?? S.t(.captureSave),
-            holdMs: needsHold ? Rules.holdToSaveMs : nil,
             disabled: missing
         ) {
             if longPressed { longPressed = false; return }
             save(keep: keepOpen)
         }
-        // The label is the bar's own words; what is missing, or that this one
-        // has to be held, is a hint — a name that changes under you is worse
-        // than no name at all.
-        .accessibilityHint(needsHold && !missing ? S.t(.captureHoldHint) : hint)
-        // AC-1.6 — a long press saves and keeps the sheet open. It is offered
-        // only when the 3-second ring is not: above the cooling floor the press
-        // and hold already means something else, and one gesture may not mean
-        // two things.
+        // The label is the bar's own words; what is missing is a hint — a name
+        // that changes under you is worse than no name at all.
+        .accessibilityHint(hint)
+        // AC-1.6 — a long press saves and keeps the sheet open.
         .simultaneousGesture(
             LongPressGesture(minimumDuration: longPressSeconds).onEnded { _ in
-                guard !needsHold, !missing else { return }
+                guard !missing else { return }
                 longPressed = true
                 save(keep: true)
-            },
-            including: needsHold ? .subviews : .all
+            }
         )
     }
 
@@ -758,9 +752,6 @@ struct CaptureScreen: View {
         overFloor && (intent == .want || intent == .impulse) && !overrideHold
     }
     private var showsTier: Bool { cooling > 0 && intent != nil && intent != .need }
-    /// SCREENS.md C9b — the hold is asked for by the amount, or by an allowance
-    /// that is already spent, whichever is true first.
-    private var needsHold: Bool { !income && (overFloor || perDay < 0) }
     private var needsRate: Bool { foreign && rateMicro == nil }
     private var missing: Bool {
         keyedFen == 0 || needsRate || categoryID == nil || (!income && intent == nil)

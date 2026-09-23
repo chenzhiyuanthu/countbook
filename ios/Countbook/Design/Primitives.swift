@@ -32,10 +32,6 @@ private let iconStroke: CGFloat = 1.5
 /// taking a second ink token, exactly as the web bar does.
 private let pressedOpacity: Double = 0.86
 
-/// §5.6 — the hold ring's unfilled track is the label colour at 0.4. It is the
-/// only place in the product a colour is used at partial opacity.
-private let ringTrackOpacity: Double = 0.4
-
 // MARK: - Type
 
 /// §5.6 and §5.7 set a few labels at a weight their type role does not carry: a
@@ -72,10 +68,9 @@ private extension View {
 
 // MARK: - Motion
 
-/// Reduced motion removes depictions, never mechanics (§6.6): a hold still takes
-/// as long, a cooling arc still updates. Only the tween goes — a movement
-/// collapses to the shortest fade the token file emits, and a rule that only
-/// slides is given no animation at all.
+/// Reduced motion removes depictions, never mechanics (§6.6): a cooling arc still
+/// updates. Only the tween goes — a movement collapses to the shortest fade the
+/// token file emits, and a rule that only slides is given no animation at all.
 private func eased(_ duration: Double, reduced: Bool) -> Animation? {
     reduced ? .linear(duration: Motion.rowFade) : Motion.ease(duration)
 }
@@ -199,175 +194,42 @@ private struct BarPressStyle: ButtonStyle {
 }
 
 /// §5.6, the primary bar: ink ground, paper label, 52 high, card radius.
-///
-/// `holdMs` turns it into the commit hold — pass `Rules.holdToSaveMs`. The ring
-/// is an unfilled 1pt circle that fills strictly linearly and fires only on
-/// completion: an eased timer lies about how much time is left. A release, or a
-/// finger that slides off the bar, drops the arc to zero with no rewind and
-/// nothing is saved. Under reduced motion the wait is unchanged and only its
-/// depiction changes to a countdown, because the delay is the mechanic (§9.7).
 struct PrimaryButton: View {
     let title: String
-    var holdMs: Int? = nil
     var disabled: Bool = false
     var accessibilityLabel: String? = nil
     let action: () -> Void
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    @State private var progress: CGFloat = 0
-    @State private var secondsLeft: Int = 0
-    @State private var holding = false
-    @State private var hold: Task<Void, Never>?
-    /// A hold that has completed must not restart under a finger that has not
-    /// lifted yet, so the press is tracked apart from the timer.
-    @State private var pressing = false
-    @State private var barSize: CGSize = .zero
-
     init(
         _ title: String,
-        holdMs: Int? = nil,
         disabled: Bool = false,
         accessibilityLabel: String? = nil,
         action: @escaping () -> Void
     ) {
         self.title = title
-        self.holdMs = holdMs
         self.disabled = disabled
         self.accessibilityLabel = accessibilityLabel
         self.action = action
     }
 
-    private var held: Bool { (holdMs ?? 0) > 0 }
     private var ground: Color { disabled ? Ink.surfaceSunken : Ink.accentInk }
     private var labelInk: Color { disabled ? Ink.ink300 : Ink.accentOn }
 
     var body: some View {
-        if held {
-            bar
-                .opacity(holding ? pressedOpacity : 1)
-                .contentShape(Rectangle())
-                .gesture(holdGesture, including: disabled ? .subviews : .all)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(accessibilityLabel ?? title)
-                // VoiceOver cannot hold a finger down; activating the element
-                // starts the same timer and commits when it elapses, so the
-                // delay is kept rather than waived.
-                .accessibilityValue(holding ? String(secondsLeft) : "")
-                .accessibilityAddTraits(disabled ? [] : .isButton)
-                .accessibilityAction { begin() }
-                .onDisappear(perform: stop)
-        } else {
-            Button(action: action) { bar }
-                .buttonStyle(BarPressStyle(pressedOpacity: pressedOpacity))
-                .disabled(disabled)
-                .accessibilityLabel(accessibilityLabel ?? title)
-        }
+        Button(action: action) { bar }
+            .buttonStyle(BarPressStyle(pressedOpacity: pressedOpacity))
+            .disabled(disabled)
+            .accessibilityLabel(accessibilityLabel ?? title)
     }
 
     private var bar: some View {
         Text(title)
             .typeRole(.body, weight: .semibold, ink: labelInk)
             .multilineTextAlignment(.center)
-            .padding(.leading, Space.s4)
-            // Room at the right end for the ring, which is centred 16 in.
-            .padding(.trailing, held ? Space.s4 * 2 + Space.s6 : Space.s4)
+            .padding(.horizontal, Space.s4)
             .frame(maxWidth: .infinity, minHeight: Theme.barHeight)
             .background(ground)
             .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .overlay(alignment: .trailing) { ring }
-            .background {
-                // The gesture has to know when the finger has left the bar, and
-                // only the layout knows how wide the bar came out.
-                GeometryReader { geo in
-                    Color.clear
-                        .onAppear { barSize = geo.size }
-                        .onChange(of: geo.size) { _, size in barSize = size }
-                }
-            }
-    }
-
-    @ViewBuilder
-    private var ring: some View {
-        if held && !disabled {
-            Group {
-                if reduceMotion {
-                    Text(holding ? String(secondsLeft) : "")
-                        .typeRole(.mono, weight: .regular, ink: labelInk, mono: true)
-                        .frame(width: Space.s6, height: Space.s6)
-                } else {
-                    ZStack {
-                        Circle()
-                            .strokeBorder(labelInk.opacity(ringTrackOpacity), lineWidth: Layout.hairline)
-                        Circle()
-                            .trim(from: 0, to: progress)
-                            .stroke(labelInk, style: StrokeStyle(lineWidth: Layout.hairline, lineCap: .butt))
-                            // Twelve o'clock start, filling clockwise.
-                            .rotationEffect(.degrees(-90))
-                            .padding(Layout.hairline / 2)
-                    }
-                    .frame(width: Space.s6, height: Space.s6)
-                }
-            }
-            .padding(.trailing, Space.s4)
-            .accessibilityHidden(true)
-        }
-    }
-
-    /// A zero-distance drag rather than a `LongPressGesture`: the gesture must
-    /// report the finger sliding off the bar, which a long press does not.
-    private var holdGesture: some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { value in
-                if !pressing {
-                    pressing = true
-                    begin()
-                } else if hold != nil, barSize != .zero,
-                          !CGRect(origin: .zero, size: barSize).contains(value.location) {
-                    stop()
-                }
-            }
-            .onEnded { _ in
-                pressing = false
-                stop()
-            }
-    }
-
-    private func begin() {
-        guard !disabled, hold == nil, let ms = holdMs, ms > 0 else { return }
-        holding = true
-        secondsLeft = Int((Double(ms) / 1000).rounded(.up))
-        if !reduceMotion {
-            withAnimation(.linear(duration: Double(ms) / 1000)) { progress = 1 }
-        }
-        hold = Task { @MainActor in
-            let end = Date().addingTimeInterval(Double(ms) / 1000)
-            while !Task.isCancelled {
-                let left = end.timeIntervalSinceNow
-                if left <= 0 { break }
-                secondsLeft = Swift.max(1, Int(left.rounded(.up)))
-                // The countdown is a second hand, so it is repainted ten times a
-                // second and not once a frame.
-                try? await Task.sleep(for: .milliseconds(100))
-            }
-            guard !Task.isCancelled else { return }
-            hold = nil
-            reset()
-            action()
-        }
-    }
-
-    private func stop() {
-        guard hold != nil || holding else { return }
-        hold?.cancel()
-        hold = nil
-        reset()
-    }
-
-    private func reset() {
-        holding = false
-        // Instant, not a rewind: the arc reports elapsed time and there is none.
-        withAnimation(.linear(duration: 0)) { progress = 0 }
     }
 }
 

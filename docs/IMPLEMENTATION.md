@@ -161,8 +161,7 @@ MoneyText(fen, currency?) -> string    // plain string, for aria and exports
 <Row left={ReactNode} right={ReactNode} sub={ReactNode} onClick?={()=>void} />
 <Rule strong?={boolean} broken?={boolean} />          // broken = 破版, an overspend
 <Label>…</Label>                                       // 11px caps, ink-500
-<Button variant="primary"|"quiet"|"danger" onClick fullWidth? disabled? holdMs?>…</Button>
-   // holdMs turns it into a press-and-hold with a 1px ring filling linearly
+<Button variant="primary"|"quiet"|"danger" onClick fullWidth? disabled?>…</Button>
 <Segmented options={{value,label}[]} value onChange />  // the 2px rule slides, 180ms
 <Sheet onClose title?>…</Sheet>                        // scrim + the one shadow
 <Field label value onChange placeholder? type? suffix? mono? />
