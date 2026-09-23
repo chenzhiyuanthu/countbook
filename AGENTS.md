@@ -5,6 +5,23 @@ side: how to verify a change, and how to ship it to the two places it runs.
 Everything below has been done from a terminal on the owner's Mac; nothing
 needs Xcode's window or a cable, except the very first pairing of a new phone.
 
+## Every change ships
+
+The owner uses the live app, not the repo, so a change is not done until it is
+published. Once it passes the checks below, publish it **without asking**:
+
+- anything under `web/`, `server/` or `design/` → `./server/deploy.sh`
+- anything under `ios/` or `design/` → `./scripts/ios-ota.sh`, then tell the
+  owner to reinstall from `https://countbook.chenzhiyuanthu.com/ota/`
+- a change that touches both runs both, `deploy.sh` first (it clears
+  `/opt/countbook/web` except `ota/`)
+
+An OTA publish is always followed by committing the whole working tree and
+pushing it to `main` on GitHub, so the build on the phone is a commit anyone
+can find. The push also redeploys the Pages mirror. A docs-only change has
+nothing to publish; outside an OTA publish, committing and pushing are the
+owner's call.
+
 ## Layout
 
 | Path | What |
